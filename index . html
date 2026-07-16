@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Smart Reception SaaS Workspace</title>
+  <!-- Tailwind CSS & FontAwesome Icons -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Supabase JS CDN Library -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  
+  <style>
+    :root { 
+      --primary-color: #2563eb; /* Clean SaaS Blue by default */
+    }
+    body { 
+      font-family: 'Inter', sans-serif; 
+      background-color: #f8fafc; /* Crisp, ultra-light background slate */
+    }
+    .brand-bg { background-color: var(--primary-color); }
+    .brand-text { color: var(--primary-color); }
+    .brand-border { border-color: var(--primary-color); }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between text-slate-800">
+
+  <!-- TOP MULTI-TENANT BRANDING HEADER -->
+  <header class="bg-white border-b border-slate-200 py-4 px-6 shadow-sm">
+    <div class="max-w-7xl mx-auto flex items-center justify-between">
+      <div>
+        <h1 id="header-org-name" class="text-2xl font-bold text-slate-900 tracking-tight">Smart Reception</h1>
+        <p id="header-tagline" class="text-sm text-slate-500 font-medium">Visitor & Staff Management System</p>
+      </div>
+      
+      <!-- Logo frame - details change automatically based on client identity -->
+      <div id="logo-container" class="w-28 h-12 flex items-center justify-center border border-dashed border-slate-300 rounded-lg bg-slate-50 overflow-hidden">
+        <span id="logo-placeholder" class="text-xs text-slate-400 font-bold uppercase tracking-wider">Logo</span>
+        <img id="logo-image" class="hidden h-full w-full object-contain p-1" alt="Client Logo">
+      </div>
+    </div>
+  </header>
+
+  <!-- WORKSPACE ROUTER VIEW -->
+  <main class="flex-grow flex items-center justify-center p-6">
+    
+    <!-- 1. AUTH SCREEN (Shown by Default) -->
+    <div id="auth-screen" class="w-full max-w-md bg-white p-8 rounded-2xl shadow-xl border border-slate-100">
+      <div class="text-center mb-6">
+        <div class="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-blue-50 text-blue-600 mb-3 text-xl">
+          <i class="fa-solid fa-shield-halved"></i>
+        </div>
+        <h2 class="text-xl font-bold text-slate-900">Workspace Portal</h2>
+        <p class="text-sm text-slate-400 mt-1">Please sign in to access your dashboard</p>
+      </div>
+      
+      <form id="login-form" class="space-y-4">
+        <div>
+          <label class="block text-sm font-semibold text-slate-700 mb-1">Email Address</label>
+          <input type="email" id="login-email" required placeholder="name@company.com" class="w-full p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none transition">
+        </div>
+        <div>
+          <label class="block text-sm font-semibold text-slate-700 mb-1">Password</label>
+          <input type="password" id="login-password" required placeholder="••••••••" class="w-full p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none transition">
+        </div>
+        <button type="submit" class="w-full py-3 bg-slate-900 hover:bg-slate-800 text-white font-semibold rounded-xl shadow-md transition duration-150">
+          Sign In
+        </button>
+      </form>
+      <p id="login-error" class="text-red-500 text-sm mt-3 text-center font-medium hidden"></p>
+    </div>
+
+    <!-- 2. MAIN APPLICATION WORKSPACE (Hidden until login authentication succeeds) -->
+    <div id="app-workspace" class="hidden w-full max-w-7xl mx-auto bg-white rounded-2xl shadow-sm border border-slate-200/80 p-6 min-h-[500px]">
+      <div class="flex justify-between items-center mb-6 pb-4 border-b border-slate-100">
+        <div>
+          <span class="text-xs font-bold uppercase tracking-widest text-slate-400">Control Center</span>
+          <h3 id="workspace-org-title" class="text-xl font-bold text-slate-800 mt-0.5">Workspace</h3>
+        </div>
+        <button onclick="handleLogout()" class="py-2 px-4 bg-slate-50 hover:bg-slate-100 text-slate-600 rounded-xl text-sm font-semibold border border-slate-200 transition">
+          <i class="fa-solid fa-right-from-bracket mr-1.5"></i> Exit System
+        </button>
+      </div>
+
+      <!-- Tab Navigation Menu -->
+      <div class="border-b border-slate-200 mb-6 flex space-x-2">
+        <button id="btn-tab-visitors" onclick="switchTab('visitors')" class="py-2.5 px-4 font-semibold text-sm border-b-2 transition">
+          <i class="fa-solid fa-users mr-2"></i>Visitor Management
+        </button>
+        <button id="btn-tab-staff" onclick="switchTab('staff')" class="py-2.5 px-4 font-semibold text-sm border-b-2 transition">
+          <i class="fa-solid fa-id-card-clip mr-2"></i>Staff & Attendance
+        </button>
+        <button id="btn-tab-settings" onclick="switchTab('settings')" class="py-2.5 px-4 font-semibold text-sm border-b-2 transition">
+          <i class="fa-solid fa-sliders mr-2"></i>Workspace Settings
+        </button>
+      </div>
+
+      <!-- Main Dynamic Workspace View -->
+      <div id="tab-content" class="py-2">
+        <!-- Content injects here via Javascript logic -->
+      </div>
+    </div>
+
+  </main>
+
+  <!-- SYSTEM FOOTER -->
+  <footer class="bg-white text-center py-4 border-t border-slate-200 text-xs text-slate-400 font-medium">
+    Powered by Cloud Reception Multi-Tenant Network &copy; 2026
+  </footer>
+
+  <!-- MULTI-TENANT JAVASCRIPT CORE SYSTEM ENGINE -->
+  <script>
+    // ======= CREDENTIALS DYNAMICALLY INJECTED =======
+    const supabaseUrl = "https://ygifkboqpoiqhdzfdasv.supabase.co"; 
+    const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlnaWZrYm9xcG9pcWhkemZkYXN2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQxNjE3MDgsImV4cCI6MjA5OTczNzcwOH0.d1f-zZT9tvl4O7A_o3CQ_2r-gKOGEUrh3goGXiopCaY"; 
+    const sbClient = supabase.createClient(supabaseUrl, supabaseKey);
+
+    // Dynamic global trackers
+    let currentUser = null;
+    let userOrgId = null; 
+    let orgSettings = {};
+
+    // Initial load tracking hook
+    window.addEventListener('DOMContentLoaded', async () => {
+      const { data: { session } } = await sbClient.auth.getSession();
+      if (session) {
+        setupUserSession(session.user);
+      } else {
+        showScreen('auth-screen');
+      }
+    });
+
+    // Handle form login
+    document.getElementById('login-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const email = document.getElementById('login-email').value;
+      const password = document.getElementById('login-password').value;
+      const errorEl = document.getElementById('login-error');
+      errorEl.classList.add('hidden');
+
+      const { data, error } = await sbClient.auth.signInWithPassword({ email, password });
+      
+      if (error) {
+        errorEl.textContent = error.message;
+        errorEl.classList.remove('hidden');
+      } else {
+        setupUserSession(data.user);
+      }
+    });
+
+    // Isolate workspace based on the user's secret Organization ID
+    async function setupUserSession(user) {
+      currentUser = user;
+      
+      // Pull Organization metadata injected on the client profile card
+      userOrgId = user.user_metadata?.organization_id;
+
+      if (!userOrgId) {
+        alert("System Configuration Error: This login account has no organization metadata link. Action Denied.");
+        await handleLogout();
+        return;
+      }
+
+      // Fetch customization parameters assigned strictly to this organization ID
+      await loadOrganizationSettings();
+      
+      showScreen('app-workspace');
+      switchTab('visitors');
+    }
+
+    // Load Settings matching exclusively userOrgId
+    async function loadOrganizationSettings() {
+      try {
+        const { data, error } = await sbClient
+          .from('org_settings')
+          .select('*')
+          .eq('organization_id', userOrgId)
+          .maybeSingle();
+
+        if (data) {
+          orgSettings = data;
+        } else {
+          // If a new client logs into a blank slate, initialize default configurations right here
+          const { data: newSettings } = await sbClient
+            .from('org_settings')
+            .insert({ organization_id: userOrgId })
+            .select()
+            .single();
+          orgSettings = newSettings;
+        }
+        applyBranding();
+      } catch (err) {
+        console.error("Critical loading configuration error:", err.message);
+      }
+    }
+
+    // Apply specific parameters dynamically right on your runtime page layout
+    function applyBranding() {
+      document.getElementById('header-org-name').textContent = orgSettings.org_name || "Smart Reception";
+      document.getElementById('header-tagline').textContent = orgSettings.tagline || "System Active";
+      document.getElementById('workspace-org-title').textContent = `${orgSettings.org_name || 'Organization'} Dashboard`;
+      
+      const logoUrl = orgSettings.logo_url;
+      const logoImg = document.getElementById('logo-image');
+      const logoPlaceholder = document.getElementById('logo-placeholder');
+
+      if (logoUrl && logoUrl.trim() !== "") {
+        logoImg.src = logoUrl;
+        logoImg.classList.remove('hidden');
+        logoPlaceholder.classList.add('hidden');
+      } else {
+        logoImg.classList.add('hidden');
+        logoPlaceholder.classList.remove('hidden');
+      }
+
+      // Override the application theme colors dynamically 
+      const color = orgSettings.primary_color || '#2563eb';
+      document.documentElement.style.setProperty('--primary-color', color);
+    }
+
+    function showScreen(screenId) {
+      document.getElementById('auth-screen').classList.add('hidden');
+      document.getElementById('app-workspace').classList.add('hidden');
+      document.getElementById(screenId).classList.remove('hidden');
+    }
+
+    function switchTab(tab) {
+      const container = document.getElementById('tab-content');
+      const tabs = ['visitors', 'staff', 'settings'];
+      
+      tabs.forEach(t => {
+        const btn = document.getElementById(`btn-tab-${t}`);
+        if(t === tab) {
+          btn.className = "py-2.5 px-4 font-bold text-sm border-b-2 border-slate-900 text-slate-900 transition";
+        } else {
+          btn.className = "py-2.5 px-4 font-semibold text-sm border-b-2 border-transparent text-slate-400 hover:text-slate-600 transition";
+        }
+      });
+
+      if (tab === 'visitors') {
+        container.innerHTML = `
+          <div class="bg-slate-50 rounded-xl p-6 border border-slate-100 space-y-4">
+            <h4 class="text-base font-bold text-slate-900"><i class="fa-solid fa-person-walking-arrow-right mr-2 text-slate-400"></i>Active Visitors Portal</h4>
+            <p class="text-sm text-slate-500 leading-relaxed">This data feed is isolated securely for organization anchor: <span class="bg-white border px-2 py-0.5 rounded font-mono text-xs font-bold text-slate-700">${userOrgId}</span>. No other companies on this network can see this space.</p>
+            <div class="h-32 flex items-center justify-center border border-dashed border-slate-200 rounded-xl bg-white text-slate-400 text-sm">
+               Visitor check-in forms and history engine fully safe under multi-tenant filtering rules.
+            </div>
+          </div>
+        `;
+      } else if (tab === 'staff') {
+        container.innerHTML = `
+          <div class="bg-slate-50 rounded-xl p-6 border border-slate-100 space-y-4">
+            <h4 class="text-base font-bold text-slate-900"><i class="fa-solid fa-user-clock mr-2 text-slate-400"></i>Staff Verification & Rosters</h4>
+            <p class="text-sm text-slate-500">Live check-in logging tied to Organization database pointer.</p>
+          </div>
+        `;
+      } else if (tab === 'settings') {
+        container.innerHTML = `
+          <div class="max-w-xl space-y-5 bg-white border border-slate-200/60 p-6 rounded-xl shadow-sm">
+            <div>
+              <h4 class="text-base font-bold text-slate-900">Custom Branding Controls</h4>
+              <p class="text-xs text-slate-400 mt-0.5">Customize your workspace parameters instantly.</p>
+            </div>
+            <div class="space-y-4">
+              <div>
+                <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Company / Facility Name</label>
+                <input type="text" id="setting-name" value="${orgSettings.org_name || ''}" class="w-full p-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none">
+              </div>
+              <div>
+                <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Theme Brand Hex Color</label>
+                <input type="text" id="setting-color" value="${orgSettings.primary_color || '#2563eb'}" class="w-full p-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none">
+              </div>
+              <div>
+                <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Logo URL String</label>
+                <input type="text" id="setting-logo" value="${orgSettings.logo_url || ''}" class="w-full p-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none">
+              </div>
+              <button onclick="saveSettings()" class="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm rounded-xl transition shadow-sm">
+                Save System Branding
+              </button>
+            </div>
+          </div>
+        `;
+      }
+    }
+
+    // Save configurations securely targeted at organizational scope
+    async function saveSettings() {
+      const newName = document.getElementById('setting-name').value;
+      const newColor = document.getElementById('setting-color').value;
+      const newLogo = document.getElementById('setting-logo').value;
+
+      const { error } = await sbClient
+        .from('org_settings')
+        .update({ org_name: newName, primary_color: newColor, logo_url: newLogo })
+        .eq('organization_id', userOrgId);
+
+      if (error) {
+        alert("Configuration write failure: " + error.message);
+      } else {
+        alert("Branding metrics saved across the grid!");
+        await loadOrganizationSettings();
+      }
+    }
+
+    async function handleLogout() {
+      await sbClient.auth.signOut();
+      currentUser = null;
+      userOrgId = null;
+      showScreen('auth-screen');
+    }
+  </script>
+</body>
+</html>
