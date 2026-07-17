@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -261,14 +262,44 @@
 
       if (tab === 'visitors') {
         container.innerHTML = `
-          <div class="bg-slate-50 rounded-xl p-6 border border-slate-100 space-y-4">
-            <h4 class="text-base font-bold text-slate-900"><i class="fa-solid fa-person-walking-arrow-right mr-2 text-slate-400"></i>Active Visitors Portal</h4>
-            <p class="text-sm text-slate-500 leading-relaxed">This data feed is isolated securely for organization anchor: <span class="bg-white border px-2 py-0.5 rounded font-mono text-xs font-bold text-slate-700">${userOrgId}</span>.</p>
-            <div id="visitors-table-wrap" class="bg-white border border-slate-200 rounded-xl overflow-x-auto">
-              <div class="p-6 text-center text-slate-400 text-sm">Loading visitors…</div>
+          <div class="space-y-6">
+            <!-- Visitor Check-In Form -->
+            <div class="bg-white border border-slate-200 rounded-xl p-6 space-y-4">
+              <h4 class="text-base font-bold text-slate-900"><i class="fa-solid fa-clipboard-user mr-2 text-slate-400"></i>Visitor Check-In</h4>
+              <form id="checkin-form" class="space-y-3">
+                <input type="text" id="checkin-id" placeholder="ID Number" required class="w-full p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                <input type="text" id="checkin-name" placeholder="Full Name" required class="w-full p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                <input type="tel" id="checkin-phone" placeholder="Phone Number" required class="w-full p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                <input type="text" id="checkin-purpose" placeholder="Purpose" required class="w-full p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                <label class="flex items-start gap-2 text-xs text-slate-500">
+                  <input type="checkbox" id="checkin-consent" required class="mt-0.5">
+                  I agree that my name, ID number, and phone number will be recorded for front desk and security purposes only.
+                </label>
+                <button type="submit" class="w-full py-3 bg-slate-900 hover:bg-slate-800 text-white font-semibold rounded-xl transition">
+                  Check In
+                </button>
+                <p id="checkin-error" class="text-red-500 text-sm text-center font-medium hidden"></p>
+              </form>
+            </div>
+
+            <!-- Today's Visitors -->
+            <div class="bg-slate-50 rounded-xl p-6 border border-slate-100 space-y-4">
+              <div class="flex items-center justify-between flex-wrap gap-3">
+                <h4 class="text-base font-bold text-slate-900"><i class="fa-solid fa-person-walking-arrow-right mr-2 text-slate-400"></i>Today: <span id="today-visitor-count">0</span> Visitors</h4>
+              </div>
+              <input type="text" id="visitor-search" placeholder="Search today's visitors by name, ID or phone" class="w-full p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none">
+              <div id="visitors-table-wrap" class="bg-white border border-slate-200 rounded-xl overflow-x-auto">
+                <div class="p-6 text-center text-slate-400 text-sm">Loading visitors…</div>
+              </div>
             </div>
           </div>
         `;
+
+        document.getElementById('checkin-form').addEventListener('submit', handleVisitorCheckIn);
+        document.getElementById('visitor-search').addEventListener('input', (e) => {
+          renderVisitorsTable(filterVisitors(e.target.value));
+        });
+
         loadVisitorsTable();
       } else if (tab === 'staff') {
         container.innerHTML = `
@@ -329,9 +360,45 @@
       }
     }
 
-    // Load and render the visitors table using actual schema columns
+    // In-memory cache of the currently loaded visitors + host name lookup, used by search filtering
+    let visitorsCache = [];
+    let hostNameCache = {};
+
+    // Handle the Check-In form submit: writes a real row into public.visitors
+    async function handleVisitorCheckIn(e) {
+      e.preventDefault();
+      const idNumber = document.getElementById('checkin-id').value.trim();
+      const name = document.getElementById('checkin-name').value.trim();
+      const phone = document.getElementById('checkin-phone').value.trim();
+      const purpose = document.getElementById('checkin-purpose').value.trim();
+      const errorEl = document.getElementById('checkin-error');
+      errorEl.classList.add('hidden');
+
+      const { error } = await sbClient
+        .from('visitors')
+        .insert({
+          organization_id: userOrgId,
+          visitor_id: idNumber,
+          name: name,
+          phone: phone,
+          purpose: purpose,
+          time: new Date().toISOString()
+        });
+
+      if (error) {
+        errorEl.textContent = "Check-in failed: " + error.message;
+        errorEl.classList.remove('hidden');
+        return;
+      }
+
+      document.getElementById('checkin-form').reset();
+      await loadVisitorsTable();
+    }
+
+    // Fetch visitors from Supabase and store them, then render
     async function loadVisitorsTable() {
       const wrap = document.getElementById('visitors-table-wrap');
+      wrap.innerHTML = `<div class="p-6 text-center text-slate-400 text-sm">Loading visitors…</div>`;
 
       const { data: visitors, error } = await sbClient
         .from('visitors')
@@ -344,20 +411,46 @@
         return;
       }
 
-      if (!visitors || visitors.length === 0) {
-        wrap.innerHTML = `<div class="p-6 text-center text-slate-400 text-sm">No visitors checked in yet.</div>`;
-        return;
-      }
+      visitorsCache = visitors || [];
 
       // Look up host names for any visitors that have a host_id
-      const hostIds = [...new Set(visitors.map(v => v.host_id).filter(Boolean))];
-      let hostNames = {};
+      const hostIds = [...new Set(visitorsCache.map(v => v.host_id).filter(Boolean))];
+      hostNameCache = {};
       if (hostIds.length > 0) {
         const { data: hosts } = await sbClient
           .from('staff')
           .select('id, name')
           .in('id', hostIds);
-        (hosts || []).forEach(h => { hostNames[h.id] = h.name; });
+        (hosts || []).forEach(h => { hostNameCache[h.id] = h.name; });
+      }
+
+      // Update today's count (based on the `time` column being today's date)
+      const todayStr = new Date().toDateString();
+      const todayCount = visitorsCache.filter(v => v.time && new Date(v.time).toDateString() === todayStr).length;
+      const countEl = document.getElementById('today-visitor-count');
+      if (countEl) countEl.textContent = todayCount;
+
+      renderVisitorsTable(visitorsCache);
+    }
+
+    // Filter the cached visitors list by search text (name, visitor_id, or phone)
+    function filterVisitors(query) {
+      const q = query.trim().toLowerCase();
+      if (!q) return visitorsCache;
+      return visitorsCache.filter(v =>
+        (v.name || '').toLowerCase().includes(q) ||
+        (v.visitor_id || '').toLowerCase().includes(q) ||
+        (v.phone || '').toLowerCase().includes(q)
+      );
+    }
+
+    // Render a given list of visitors into the table (used for both full load and search results)
+    function renderVisitorsTable(visitors) {
+      const wrap = document.getElementById('visitors-table-wrap');
+
+      if (!visitors || visitors.length === 0) {
+        wrap.innerHTML = `<div class="p-6 text-center text-slate-400 text-sm">No visitors found.</div>`;
+        return;
       }
 
       wrap.innerHTML = `
@@ -382,7 +475,7 @@
                 <td class="px-4 py-3">${v.phone ?? '—'}</td>
                 <td class="px-4 py-3">${v.office ?? '—'}</td>
                 <td class="px-4 py-3">${v.purpose ?? '—'}</td>
-                <td class="px-4 py-3">${hostNames[v.host_id] ?? '—'}</td>
+                <td class="px-4 py-3">${hostNameCache[v.host_id] ?? '—'}</td>
                 <td class="px-4 py-3">${v.time ? new Date(v.time).toLocaleString() : '—'}</td>
                 <td class="px-4 py-3">${v.time_out ? new Date(v.time_out).toLocaleString() : '<span class="text-emerald-600 font-semibold">Still in</span>'}</td>
               </tr>
