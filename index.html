@@ -1,40 +1,33 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Smart Reception SaaS Workspace</title>
-  <!-- Tailwind CSS & FontAwesome Icons -->
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <!-- Supabase JS CDN Library -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
   <style>
-    :root { 
-      --primary-color: #2563eb; /* Clean SaaS Blue by default */
-    }
-    body { 
-      font-family: 'Inter', sans-serif; 
-      background-color: #f8fafc; /* Crisp, ultra-light background slate */
-    }
+    :root { --primary-color: #2563eb; }
+    body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
     .brand-bg { background-color: var(--primary-color); }
     .brand-text { color: var(--primary-color); }
     .brand-border { border-color: var(--primary-color); }
+    .field-input { width: 100%; padding: 0.75rem; border: 1px solid #e2e8f0; border-radius: 0.75rem; }
+    .field-input:focus { outline: none; box-shadow: 0 0 0 2px var(--primary-color); }
+    .btn-primary { width: 100%; padding: 0.75rem; background-color: var(--primary-color); color: white; font-weight: 600; border-radius: 0.75rem; }
   </style>
 </head>
 <body class="min-h-screen flex flex-col justify-between text-slate-800">
 
-  <!-- TOP MULTI-TENANT BRANDING HEADER -->
   <header class="bg-white border-b border-slate-200 py-4 px-6 shadow-sm">
     <div class="max-w-7xl mx-auto flex items-center justify-between">
       <div>
         <h1 id="header-org-name" class="text-2xl font-bold text-slate-900 tracking-tight">Smart Reception</h1>
         <p id="header-tagline" class="text-sm text-slate-500 font-medium">Visitor & Staff Management System</p>
       </div>
-      
-      <!-- Logo frame - details change automatically based on client identity -->
       <div id="logo-container" class="w-28 h-12 flex items-center justify-center border border-dashed border-slate-300 rounded-lg bg-slate-50 overflow-hidden">
         <span id="logo-placeholder" class="text-xs text-slate-400 font-bold uppercase tracking-wider">Logo</span>
         <img id="logo-image" class="hidden h-full w-full object-contain p-1" alt="Client Logo">
@@ -42,10 +35,8 @@
     </div>
   </header>
 
-  <!-- WORKSPACE ROUTER VIEW -->
   <main class="flex-grow flex items-center justify-center p-6">
-    
-    <!-- 1. AUTH SCREEN (Shown by Default) -->
+
     <div id="auth-screen" class="w-full max-w-md bg-white p-8 rounded-2xl shadow-xl border border-slate-100">
       <div class="text-center mb-6">
         <div class="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-blue-50 text-blue-600 mb-3 text-xl">
@@ -54,29 +45,25 @@
         <h2 class="text-xl font-bold text-slate-900">Workspace Portal</h2>
         <p class="text-sm text-slate-400 mt-1">Please sign in to access your dashboard</p>
       </div>
-      
       <form id="login-form" class="space-y-4">
         <div>
           <label class="block text-sm font-semibold text-slate-700 mb-1">Email Address</label>
-          <input type="email" id="login-email" required placeholder="name@company.com" class="w-full p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none transition">
+          <input type="email" id="login-email" required placeholder="name@company.com" class="field-input">
         </div>
         <div>
           <label class="block text-sm font-semibold text-slate-700 mb-1">Password</label>
           <div class="relative">
-            <input type="password" id="login-password" required placeholder="••••••••" class="w-full p-3 pr-10 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none transition">
-            <button type="button" onclick="togglePasswordVisibility()" class="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 focus:outline-none">
+            <input type="password" id="login-password" required placeholder="••••••••" class="field-input pr-10">
+            <button type="button" onclick="togglePasswordVisibility()" class="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600">
               <i id="password-toggle-icon" class="fa-solid fa-eye"></i>
             </button>
           </div>
         </div>
-        <button type="submit" class="w-full py-3 bg-slate-900 hover:bg-slate-800 text-white font-semibold rounded-xl shadow-md transition duration-150">
-          Sign In
-        </button>
+        <button type="submit" class="w-full py-3 bg-slate-900 hover:bg-slate-800 text-white font-semibold rounded-xl shadow-md transition">Sign In</button>
       </form>
       <p id="login-error" class="text-red-500 text-sm mt-3 text-center font-medium hidden"></p>
     </div>
 
-    <!-- 2. MAIN APPLICATION WORKSPACE (Hidden until login authentication succeeds) -->
     <div id="app-workspace" class="hidden w-full max-w-7xl mx-auto bg-white rounded-2xl shadow-sm border border-slate-200/80 p-6 min-h-[500px]">
       <div class="flex justify-between items-center mb-6 pb-4 border-b border-slate-100">
         <div>
@@ -88,156 +75,99 @@
         </button>
       </div>
 
-      <!-- Tab Navigation Menu -->
-      <div class="border-b border-slate-200 mb-6 flex space-x-2">
-        <button id="btn-tab-visitors" onclick="switchTab('visitors')" class="py-2.5 px-4 font-semibold text-sm border-b-2 transition">
-          <i class="fa-solid fa-users mr-2"></i>Visitor Management
-        </button>
-        <button id="btn-tab-staff" onclick="switchTab('staff')" class="py-2.5 px-4 font-semibold text-sm border-b-2 transition">
-          <i class="fa-solid fa-id-card-clip mr-2"></i>Staff & Attendance
-        </button>
-        <button id="btn-tab-settings" onclick="switchTab('settings')" class="py-2.5 px-4 font-semibold text-sm border-b-2 transition">
-          <i class="fa-solid fa-sliders mr-2"></i>Workspace Settings
-        </button>
+      <div class="border-b border-slate-200 mb-6 flex flex-wrap gap-2">
+        <button id="btn-tab-visitors" onclick="switchTab('visitors')" class="py-2.5 px-4 font-semibold text-sm border-b-2 transition"><i class="fa-solid fa-users mr-2"></i>Visitors</button>
+        <button id="btn-tab-staff" onclick="switchTab('staff')" class="py-2.5 px-4 font-semibold text-sm border-b-2 transition"><i class="fa-solid fa-id-card-clip mr-2"></i>Staff</button>
+        <button id="btn-tab-events" onclick="switchTab('events')" class="py-2.5 px-4 font-semibold text-sm border-b-2 transition"><i class="fa-solid fa-calendar-days mr-2"></i>Events</button>
+        <button id="btn-tab-history" onclick="switchTab('history')" class="py-2.5 px-4 font-semibold text-sm border-b-2 transition"><i class="fa-solid fa-clock-rotate-left mr-2"></i>History</button>
+        <button id="btn-tab-appraisal" onclick="switchTab('appraisal')" class="py-2.5 px-4 font-semibold text-sm border-b-2 transition"><i class="fa-solid fa-chart-line mr-2"></i>Appraisal</button>
+        <button id="btn-tab-settings" onclick="switchTab('settings')" class="py-2.5 px-4 font-semibold text-sm border-b-2 transition"><i class="fa-solid fa-sliders mr-2"></i>Settings</button>
       </div>
 
-      <!-- Main Dynamic Workspace View -->
-      <div id="tab-content" class="py-2">
-        <!-- Content injects here via Javascript logic -->
-      </div>
+      <div id="tab-content" class="py-2"></div>
     </div>
 
   </main>
 
-  <!-- SYSTEM FOOTER -->
   <footer class="bg-white text-center py-4 border-t border-slate-200 text-xs text-slate-400 font-medium">
     Powered by Cloud Reception Multi-Tenant Network &copy; 2026
   </footer>
 
-  <!-- MULTI-TENANT JAVASCRIPT CORE SYSTEM ENGINE -->
   <script>
-    // ======= CREDENTIALS DYNAMICALLY INJECTED =======
-    const supabaseUrl = "https://ygifkboqpoiqhdzfdasv.supabase.co"; 
-    const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlnaWZrYm9xcG9pcWhkemZkYXN2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQxNjE3MDgsImV4cCI6MjA5OTczNzcwOH0.d1f-zZT9tvl4O7A_o3CQ_2r-gKOGEUrh3goGXiopCaY"; 
+    const supabaseUrl = "https://ygifkboqpoiqhdzfdasv.supabase.co";
+    const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlnaWZrYm9xcG9pcWhkemZkYXN2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQxNjE3MDgsImV4cCI6MjA5OTczNzcwOH0.d1f-zZT9tvl4O7A_o3CQ_2r-gKOGEUrh3goGXiopCaY";
     const sbClient = supabase.createClient(supabaseUrl, supabaseKey);
 
-    // Dynamic global trackers
     let currentUser = null;
-    let userOrgId = null; 
+    let userOrgId = null;
     let orgSettings = {};
+    let officesList = [];
+    let staffListCache = [];
+    let visitorsCache = [];
+    let hostNameCache = {};
+    let eventsCache = [];
 
-    // Initial load tracking hook
     window.addEventListener('DOMContentLoaded', async () => {
       const { data: { session } } = await sbClient.auth.getSession();
-      if (session) {
-        setupUserSession(session.user);
-      } else {
-        showScreen('auth-screen');
-      }
+      if (session) { setupUserSession(session.user); } else { showScreen('auth-screen'); }
     });
 
-    // Toggle password visibility between dots and text
     function togglePasswordVisibility() {
-      const passwordInput = document.getElementById('login-password');
-      const toggleIcon = document.getElementById('password-toggle-icon');
-      
-      if (passwordInput.type === 'password') {
-        passwordInput.type = 'text';
-        toggleIcon.classList.remove('fa-eye');
-        toggleIcon.classList.add('fa-eye-slash');
-      } else {
-        passwordInput.type = 'password';
-        toggleIcon.classList.remove('fa-eye-slash');
-        toggleIcon.classList.add('fa-eye');
-      }
+      const input = document.getElementById('login-password');
+      const icon = document.getElementById('password-toggle-icon');
+      if (input.type === 'password') { input.type = 'text'; icon.classList.replace('fa-eye','fa-eye-slash'); }
+      else { input.type = 'password'; icon.classList.replace('fa-eye-slash','fa-eye'); }
     }
 
-    // Handle form login
     document.getElementById('login-form').addEventListener('submit', async (e) => {
       e.preventDefault();
       const email = document.getElementById('login-email').value;
       const password = document.getElementById('login-password').value;
       const errorEl = document.getElementById('login-error');
       errorEl.classList.add('hidden');
-
       const { data, error } = await sbClient.auth.signInWithPassword({ email, password });
-      
-      if (error) {
-        errorEl.textContent = error.message;
-        errorEl.classList.remove('hidden');
-      } else {
-        setupUserSession(data.user);
-      }
+      if (error) { errorEl.textContent = error.message; errorEl.classList.remove('hidden'); }
+      else { setupUserSession(data.user); }
     });
 
-    // Isolate workspace based on the user's secret Organization ID
     async function setupUserSession(user) {
       currentUser = user;
-      
-      // Pull Organization metadata injected on the client profile card
       userOrgId = user.user_metadata?.organization_id;
-
       if (!userOrgId) {
         alert("System Configuration Error: This login account has no organization metadata link. Action Denied.");
         await handleLogout();
         return;
       }
-
-      // Fetch customization parameters assigned strictly to this organization ID
       await loadOrganizationSettings();
-      
+      await loadOffices();
+      await loadStaffCache();
       showScreen('app-workspace');
       switchTab('visitors');
     }
 
-    // Load Settings matching exclusively userOrgId
     async function loadOrganizationSettings() {
       try {
-        const { data, error } = await sbClient
-          .from('org_settings')
-          .select('*')
-          .eq('organization_id', userOrgId)
-          .maybeSingle();
-
-        if (data) {
-          orgSettings = data;
-        } else {
-          // If a new client logs into a blank slate, initialize default configurations right here
-          const { data: newSettings } = await sbClient
-            .from('org_settings')
-            .insert({ organization_id: userOrgId })
-            .select()
-            .single();
+        const { data } = await sbClient.from('org_settings').select('*').eq('organization_id', userOrgId).maybeSingle();
+        if (data) { orgSettings = data; }
+        else {
+          const { data: newSettings } = await sbClient.from('org_settings').insert({ organization_id: userOrgId }).select().single();
           orgSettings = newSettings;
         }
+        if (!Array.isArray(orgSettings.extra_visitor_fields)) orgSettings.extra_visitor_fields = [];
         applyBranding();
-      } catch (err) {
-        console.error("Critical loading configuration error:", err.message);
-      }
+      } catch (err) { console.error("Critical loading configuration error:", err.message); }
     }
 
-    // Apply specific parameters dynamically right on your runtime page layout
     function applyBranding() {
       document.getElementById('header-org-name').textContent = orgSettings.org_name || "Smart Reception";
       document.getElementById('header-tagline').textContent = orgSettings.tagline || "System Active";
       document.getElementById('workspace-org-title').textContent = `${orgSettings.org_name || 'Organization'} Dashboard`;
-      
       const logoUrl = orgSettings.logo_url;
       const logoImg = document.getElementById('logo-image');
       const logoPlaceholder = document.getElementById('logo-placeholder');
-
-      if (logoUrl && logoUrl.trim() !== "") {
-        logoImg.src = logoUrl;
-        logoImg.classList.remove('hidden');
-        logoPlaceholder.classList.add('hidden');
-      } else {
-        logoImg.classList.add('hidden');
-        logoPlaceholder.classList.remove('hidden');
-      }
-
-      // Override the application theme colors dynamically 
-      const color = orgSettings.primary_color || '#2563eb';
-      document.documentElement.style.setProperty('--primary-color', color);
+      if (logoUrl && logoUrl.trim() !== "") { logoImg.src = logoUrl; logoImg.classList.remove('hidden'); logoPlaceholder.classList.add('hidden'); }
+      else { logoImg.classList.add('hidden'); logoPlaceholder.classList.remove('hidden'); }
+      document.documentElement.style.setProperty('--primary-color', orgSettings.primary_color || '#2563eb');
     }
 
     function showScreen(screenId) {
@@ -246,158 +176,105 @@
       document.getElementById(screenId).classList.remove('hidden');
     }
 
-    // Router Tabs Controller
     function switchTab(tab) {
       const container = document.getElementById('tab-content');
-      const tabs = ['visitors', 'staff', 'settings'];
-      
+      const tabs = ['visitors','staff','events','history','appraisal','settings'];
       tabs.forEach(t => {
         const btn = document.getElementById(`btn-tab-${t}`);
-        if(t === tab) {
-          btn.className = "py-2.5 px-4 font-bold text-sm border-b-2 border-slate-900 text-slate-900 transition";
-        } else {
-          btn.className = "py-2.5 px-4 font-semibold text-sm border-b-2 border-transparent text-slate-400 hover:text-slate-600 transition";
-        }
+        btn.className = (t === tab)
+          ? "py-2.5 px-4 font-bold text-sm border-b-2 border-slate-900 text-slate-900 transition"
+          : "py-2.5 px-4 font-semibold text-sm border-b-2 border-transparent text-slate-400 hover:text-slate-600 transition";
       });
 
-      if (tab === 'visitors') {
-        container.innerHTML = `
-          <div class="space-y-6">
-            <!-- Visitor Check-In Form -->
-            <div class="bg-white border border-slate-200 rounded-xl p-6 space-y-4">
-              <h4 class="text-base font-bold text-slate-900"><i class="fa-solid fa-clipboard-user mr-2 text-slate-400"></i>Visitor Check-In</h4>
-              <form id="checkin-form" class="space-y-3">
-                <input type="text" id="checkin-id" placeholder="ID Number" required class="w-full p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none">
-                <input type="text" id="checkin-name" placeholder="Full Name" required class="w-full p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none">
-                <input type="tel" id="checkin-phone" placeholder="Phone Number" required class="w-full p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none">
-                <input type="text" id="checkin-purpose" placeholder="Purpose" required class="w-full p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none">
-                <label class="flex items-start gap-2 text-xs text-slate-500">
-                  <input type="checkbox" id="checkin-consent" required class="mt-0.5">
-                  I agree that my name, ID number, and phone number will be recorded for front desk and security purposes only.
-                </label>
-                <button type="submit" class="w-full py-3 bg-slate-900 hover:bg-slate-800 text-white font-semibold rounded-xl transition">
-                  Check In
-                </button>
-                <p id="checkin-error" class="text-red-500 text-sm text-center font-medium hidden"></p>
-              </form>
-            </div>
+      if (tab === 'visitors') renderVisitorsTab(container);
+      else if (tab === 'staff') renderStaffTab(container);
+      else if (tab === 'events') renderEventsTab(container);
+      else if (tab === 'history') renderHistoryTab(container);
+      else if (tab === 'appraisal') renderAppraisalTab(container);
+      else if (tab === 'settings') renderSettingsTab(container);
+    }
 
-            <!-- Today's Visitors -->
-            <div class="bg-slate-50 rounded-xl p-6 border border-slate-100 space-y-4">
-              <div class="flex items-center justify-between flex-wrap gap-3">
-                <h4 class="text-base font-bold text-slate-900"><i class="fa-solid fa-person-walking-arrow-right mr-2 text-slate-400"></i>Today: <span id="today-visitor-count">0</span> Visitors</h4>
-              </div>
-              <input type="text" id="visitor-search" placeholder="Search today's visitors by name, ID or phone" class="w-full p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none">
-              <div id="visitors-table-wrap" class="bg-white border border-slate-200 rounded-xl overflow-x-auto">
-                <div class="p-6 text-center text-slate-400 text-sm">Loading visitors…</div>
-              </div>
-            </div>
+    // ===================== OFFICES / DEPARTMENTS =====================
+    async function loadOffices() {
+      const { data } = await sbClient.from('offices').select('id, name').eq('organization_id', userOrgId).order('name');
+      officesList = data || [];
+    }
+
+    // ===================== VISITORS TAB =====================
+    function renderVisitorsTab(container) {
+      const officeOptions = officesList.map(o => `<option value="${o.name}">${o.name}</option>`).join('');
+      const extraFieldInputs = (orgSettings.extra_visitor_fields || []).map((f, i) =>
+        `<input type="text" id="checkin-extra-${i}" data-field-name="${f}" placeholder="${f}" class="field-input">`
+      ).join('');
+
+      container.innerHTML = `
+        <div class="space-y-6">
+          <div class="bg-white border border-slate-200 rounded-xl p-6 space-y-3">
+            <h4 class="text-base font-bold text-slate-900"><i class="fa-solid fa-clipboard-user mr-2 text-slate-400"></i>Visitor Check-In</h4>
+            <form id="checkin-form" class="space-y-3">
+              <input type="text" id="checkin-id" placeholder="ID Number" required class="field-input">
+              <input type="text" id="checkin-name" placeholder="Full Name" required class="field-input">
+              <input type="tel" id="checkin-phone" placeholder="Phone Number" required class="field-input">
+              <select id="checkin-office" class="field-input">
+                <option value="">Select Office / Department (optional)</option>
+                ${officeOptions}
+              </select>
+              <input type="text" id="checkin-purpose" placeholder="Purpose" required class="field-input">
+              ${extraFieldInputs}
+              <label class="flex items-start gap-2 text-xs text-slate-500">
+                <input type="checkbox" id="checkin-consent" required class="mt-0.5">
+                I agree that my name, ID number, and phone number will be recorded for front desk and security purposes only.
+              </label>
+              <button type="submit" class="btn-primary">Check In</button>
+              <p id="checkin-error" class="text-red-500 text-sm text-center font-medium hidden"></p>
+            </form>
           </div>
-        `;
 
-        document.getElementById('checkin-form').addEventListener('submit', handleVisitorCheckIn);
-        document.getElementById('visitor-search').addEventListener('input', (e) => {
-          renderVisitorsTable(filterVisitors(e.target.value));
-        });
-
-        loadVisitorsTable();
-      } else if (tab === 'staff') {
-        container.innerHTML = `
           <div class="bg-slate-50 rounded-xl p-6 border border-slate-100 space-y-4">
-            <h4 class="text-base font-bold text-slate-900"><i class="fa-solid fa-user-clock mr-2 text-slate-400"></i>Staff Verification & Rosters</h4>
-            <p class="text-sm text-slate-500">Live check-in logging tied to Organization database pointer.</p>
-            <div id="staff-table-wrap" class="bg-white border border-slate-200 rounded-xl overflow-x-auto">
-              <div class="p-6 text-center text-slate-400 text-sm">Loading staff…</div>
+            <h4 class="text-base font-bold text-slate-900">Today: <span id="today-visitor-count">0</span> Visitors</h4>
+            <input type="text" id="visitor-search" placeholder="Search today's visitors by name, ID or phone" class="field-input">
+            <div id="visitors-table-wrap" class="bg-white border border-slate-200 rounded-xl overflow-x-auto">
+              <div class="p-6 text-center text-slate-400 text-sm">Loading visitors…</div>
             </div>
+            <button onclick="window.print()" class="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-sm rounded-xl transition">Print Today's Log</button>
           </div>
-        `;
-        loadStaffTable();
-      } else if (tab === 'settings') {
-        container.innerHTML = `
-          <div class="max-w-xl space-y-5 bg-white border border-slate-200/60 p-6 rounded-xl shadow-sm">
-            <div>
-              <h4 class="text-base font-bold text-slate-900">Custom Branding Controls</h4>
-              <p class="text-xs text-slate-400 mt-0.5">Customize your workspace parameters instantly.</p>
-            </div>
-            <div class="space-y-4">
-              <div>
-                <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Company / Facility Name</label>
-                <input type="text" id="setting-name" value="${orgSettings.org_name || ''}" class="w-full p-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none">
-              </div>
-              <div>
-                <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Theme Brand Hex Color</label>
-                <input type="text" id="setting-color" value="${orgSettings.primary_color || '#2563eb'}" class="w-full p-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none">
-              </div>
-              <div>
-                <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Logo URL String</label>
-                <input type="text" id="setting-logo" value="${orgSettings.logo_url || ''}" class="w-full p-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none">
-              </div>
-              <button onclick="saveSettings()" class="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm rounded-xl transition shadow-sm">
-                Save System Branding
-              </button>
-            </div>
-          </div>
-        `;
-      }
+        </div>
+      `;
+
+      document.getElementById('checkin-form').addEventListener('submit', handleVisitorCheckIn);
+      document.getElementById('visitor-search').addEventListener('input', (e) => renderVisitorsTable(filterVisitors(e.target.value)));
+      loadVisitorsTable();
     }
 
-    // Save configurations securely targeted at organizational scope
-    async function saveSettings() {
-      const newName = document.getElementById('setting-name').value;
-      const newColor = document.getElementById('setting-color').value;
-      const newLogo = document.getElementById('setting-logo').value;
-
-      const { error } = await sbClient
-        .from('org_settings')
-        .update({ org_name: newName, primary_color: newColor, logo_url: newLogo })
-        .eq('organization_id', userOrgId);
-
-      if (error) {
-        alert("Configuration write failure: " + error.message);
-      } else {
-        alert("Branding metrics saved across the grid!");
-        await loadOrganizationSettings();
-      }
-    }
-
-    // In-memory cache of the currently loaded visitors + host name lookup, used by search filtering
-    let visitorsCache = [];
-    let hostNameCache = {};
-
-    // Handle the Check-In form submit: writes a real row into public.visitors
     async function handleVisitorCheckIn(e) {
       e.preventDefault();
       const idNumber = document.getElementById('checkin-id').value.trim();
       const name = document.getElementById('checkin-name').value.trim();
       const phone = document.getElementById('checkin-phone').value.trim();
+      const office = document.getElementById('checkin-office').value;
       const purpose = document.getElementById('checkin-purpose').value.trim();
       const errorEl = document.getElementById('checkin-error');
       errorEl.classList.add('hidden');
 
-      const { error } = await sbClient
-        .from('visitors')
-        .insert({
-          organization_id: userOrgId,
-          visitor_id: idNumber,
-          name: name,
-          phone: phone,
-          purpose: purpose,
-          time: new Date().toISOString()
-        });
+      const extraFields = {};
+      document.querySelectorAll('[id^="checkin-extra-"]').forEach(input => {
+        extraFields[input.dataset.fieldName] = input.value;
+      });
 
-      if (error) {
-        errorEl.textContent = "Check-in failed: " + error.message;
-        errorEl.classList.remove('hidden');
-        return;
-      }
+      const { error } = await sbClient.from('visitors').insert({
+        organization_id: userOrgId, visitor_id: idNumber, name, phone,
+        office: office || null, purpose, time: new Date().toISOString(),
+        extra_fields: extraFields
+      });
 
+      if (error) { errorEl.textContent = "Check-in failed: " + error.message; errorEl.classList.remove('hidden'); return; }
       document.getElementById('checkin-form').reset();
       await loadVisitorsTable();
     }
 
-    // Fetch visitors from Supabase and store them, then render
     async function loadVisitorsTable() {
       const wrap = document.getElementById('visitors-table-wrap');
+      if (!wrap) return;
       wrap.innerHTML = `<div class="p-6 text-center text-slate-400 text-sm">Loading visitors…</div>`;
 
       const { data: visitors, error } = await sbClient
@@ -406,25 +283,16 @@
         .eq('organization_id', userOrgId)
         .order('time', { ascending: false });
 
-      if (error) {
-        wrap.innerHTML = `<div class="p-6 text-center text-red-500 text-sm">Error loading visitors: ${error.message}</div>`;
-        return;
-      }
+      if (error) { wrap.innerHTML = `<div class="p-6 text-center text-red-500 text-sm">Error loading visitors: ${error.message}</div>`; return; }
 
       visitorsCache = visitors || [];
-
-      // Look up host names for any visitors that have a host_id
       const hostIds = [...new Set(visitorsCache.map(v => v.host_id).filter(Boolean))];
       hostNameCache = {};
       if (hostIds.length > 0) {
-        const { data: hosts } = await sbClient
-          .from('staff')
-          .select('id, name')
-          .in('id', hostIds);
+        const { data: hosts } = await sbClient.from('staff').select('id, name').in('id', hostIds);
         (hosts || []).forEach(h => { hostNameCache[h.id] = h.name; });
       }
 
-      // Update today's count (based on the `time` column being today's date)
       const todayStr = new Date().toDateString();
       const todayCount = visitorsCache.filter(v => v.time && new Date(v.time).toDateString() === todayStr).length;
       const countEl = document.getElementById('today-visitor-count');
@@ -433,7 +301,6 @@
       renderVisitorsTable(visitorsCache);
     }
 
-    // Filter the cached visitors list by search text (name, visitor_id, or phone)
     function filterVisitors(query) {
       const q = query.trim().toLowerCase();
       if (!q) return visitorsCache;
@@ -444,40 +311,25 @@
       );
     }
 
-    // Render a given list of visitors into the table (used for both full load and search results)
     function renderVisitorsTable(visitors) {
       const wrap = document.getElementById('visitors-table-wrap');
-
-      if (!visitors || visitors.length === 0) {
-        wrap.innerHTML = `<div class="p-6 text-center text-slate-400 text-sm">No visitors found.</div>`;
-        return;
-      }
+      if (!wrap) return;
+      if (!visitors || visitors.length === 0) { wrap.innerHTML = `<div class="p-6 text-center text-slate-400 text-sm">No visitors found.</div>`; return; }
 
       wrap.innerHTML = `
         <table class="w-full text-sm text-left">
           <thead class="bg-slate-50 text-slate-500 uppercase text-xs font-bold">
-            <tr>
-              <th class="px-4 py-3">Visitor ID</th>
-              <th class="px-4 py-3">Name</th>
-              <th class="px-4 py-3">Phone</th>
-              <th class="px-4 py-3">Office</th>
-              <th class="px-4 py-3">Purpose</th>
-              <th class="px-4 py-3">Host</th>
-              <th class="px-4 py-3">Time In</th>
-              <th class="px-4 py-3">Time Out</th>
-            </tr>
+            <tr><th class="px-4 py-3">Name</th><th class="px-4 py-3">ID</th><th class="px-4 py-3">Phone</th><th class="px-4 py-3">Office</th><th class="px-4 py-3">Arrived</th><th class="px-4 py-3">Left</th></tr>
           </thead>
           <tbody class="divide-y divide-slate-100">
             ${visitors.map(v => `
               <tr>
-                <td class="px-4 py-3 font-mono text-xs text-slate-500">${v.visitor_id ?? '—'}</td>
                 <td class="px-4 py-3 font-medium text-slate-800">${v.name ?? '—'}</td>
+                <td class="px-4 py-3 font-mono text-xs text-slate-500">${v.visitor_id ?? '—'}</td>
                 <td class="px-4 py-3">${v.phone ?? '—'}</td>
                 <td class="px-4 py-3">${v.office ?? '—'}</td>
-                <td class="px-4 py-3">${v.purpose ?? '—'}</td>
-                <td class="px-4 py-3">${hostNameCache[v.host_id] ?? '—'}</td>
-                <td class="px-4 py-3">${v.time ? new Date(v.time).toLocaleString() : '—'}</td>
-                <td class="px-4 py-3">${v.time_out ? new Date(v.time_out).toLocaleString() : '<span class="text-emerald-600 font-semibold">Still in</span>'}</td>
+                <td class="px-4 py-3">${v.time ? new Date(v.time).toLocaleTimeString() : '—'}</td>
+                <td class="px-4 py-3">${v.time_out ? new Date(v.time_out).toLocaleTimeString() : '<span class="text-emerald-600 font-semibold">Still in</span>'}</td>
               </tr>
             `).join('')}
           </tbody>
@@ -485,53 +337,533 @@
       `;
     }
 
-    // Load and render the staff table using actual schema columns
-    async function loadStaffTable() {
-      const wrap = document.getElementById('staff-table-wrap');
+    // ===================== STAFF TAB =====================
+    async function loadStaffCache() {
+      const { data } = await sbClient.from('staff').select('id, staff_id, name, type, end_date').eq('organization_id', userOrgId).order('name');
+      staffListCache = data || [];
+    }
 
-      const { data: staffList, error } = await sbClient
-        .from('staff')
-        .select('id, staff_id, name, type, end_date')
-        .eq('organization_id', userOrgId)
-        .order('name', { ascending: true });
+    function renderStaffTab(container) {
+      const staffOptions = staffListCache.map(s => `<option value="${s.staff_id}" data-name="${s.name}">${s.name} (${s.staff_id})</option>`).join('');
 
-      if (error) {
-        wrap.innerHTML = `<div class="p-6 text-center text-red-500 text-sm">Error loading staff: ${error.message}</div>`;
-        return;
-      }
+      container.innerHTML = `
+        <div class="space-y-6">
+          <div class="bg-white border border-slate-200 rounded-xl p-6 space-y-3">
+            <h4 class="text-base font-bold text-slate-900">Staff Sign-In / Out</h4>
+            <select id="staff-select" class="field-input">
+              <option value="">Select Staff...</option>
+              ${staffOptions}
+            </select>
+            <div class="grid grid-cols-2 gap-3">
+              <button onclick="handleStaffSignIn()" class="py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-semibold rounded-xl transition">Sign In</button>
+              <button onclick="handleStaffSignOut()" class="py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-xl transition">Sign Out</button>
+            </div>
+            <p id="staff-action-error" class="text-red-500 text-sm text-center font-medium hidden"></p>
+            <button onclick="toggleAddStaffForm()" class="w-full py-2.5 bg-slate-50 hover:bg-slate-100 text-slate-600 font-semibold text-sm rounded-xl border border-slate-200 transition">+ Add Staff</button>
+            <div id="add-staff-form" class="hidden space-y-2 pt-2">
+              <input type="text" id="new-staff-id" placeholder="Staff ID" class="field-input">
+              <input type="text" id="new-staff-name" placeholder="Full Name" class="field-input">
+              <input type="text" id="new-staff-type" placeholder="Type (e.g. Full-time)" class="field-input">
+              <button onclick="handleAddStaff()" class="btn-primary">Save Staff</button>
+            </div>
+            <input type="text" id="staff-search" placeholder="Search staff list" class="field-input">
+            <div id="staff-list-wrap" class="text-sm text-slate-400 text-center py-2">Loading…</div>
+          </div>
 
-      if (!staffList || staffList.length === 0) {
-        wrap.innerHTML = `<div class="p-6 text-center text-slate-400 text-sm">No staff members added yet.</div>`;
-        return;
-      }
+          <div class="bg-slate-50 rounded-xl p-6 border border-slate-100 space-y-4">
+            <h4 class="text-base font-bold text-slate-900">Today's Attendance</h4>
+            <div id="attendance-table-wrap" class="bg-white border border-slate-200 rounded-xl overflow-x-auto">
+              <div class="p-6 text-center text-slate-400 text-sm">Loading attendance…</div>
+            </div>
+          </div>
+        </div>
+      `;
+
+      document.getElementById('staff-search').addEventListener('input', (e) => renderStaffList(filterStaffList(e.target.value)));
+      renderStaffList(staffListCache);
+      loadTodayAttendance();
+    }
+
+    function toggleAddStaffForm() {
+      document.getElementById('add-staff-form').classList.toggle('hidden');
+    }
+
+    async function handleAddStaff() {
+      const staff_id = document.getElementById('new-staff-id').value.trim();
+      const name = document.getElementById('new-staff-name').value.trim();
+      const type = document.getElementById('new-staff-type').value.trim();
+      if (!staff_id || !name) { alert('Staff ID and Name are required.'); return; }
+      const { error } = await sbClient.from('staff').insert({ organization_id: userOrgId, staff_id, name, type: type || null });
+      if (error) { alert('Failed to add staff: ' + error.message); return; }
+      document.getElementById('new-staff-id').value = '';
+      document.getElementById('new-staff-name').value = '';
+      document.getElementById('new-staff-type').value = '';
+      await loadStaffCache();
+      switchTab('staff');
+    }
+
+    function filterStaffList(query) {
+      const q = query.trim().toLowerCase();
+      if (!q) return staffListCache;
+      return staffListCache.filter(s => (s.name || '').toLowerCase().includes(q) || (s.staff_id || '').toLowerCase().includes(q));
+    }
+
+    function renderStaffList(list) {
+      const wrap = document.getElementById('staff-list-wrap');
+      if (!wrap) return;
+      if (!list || list.length === 0) { wrap.innerHTML = `<div class="text-sm text-slate-400 text-center py-2">No staff found</div>`; return; }
+      wrap.innerHTML = `
+        <div class="divide-y divide-slate-100 border border-slate-200 rounded-xl overflow-hidden">
+          ${list.map(s => `
+            <div class="flex justify-between items-center px-4 py-2.5 text-sm">
+              <span class="font-medium text-slate-800">${s.name}</span>
+              <span class="text-slate-400 font-mono text-xs">${s.staff_id}</span>
+            </div>
+          `).join('')}
+        </div>
+      `;
+    }
+
+    async function handleStaffSignIn() {
+      const select = document.getElementById('staff-select');
+      const errorEl = document.getElementById('staff-action-error');
+      errorEl.classList.add('hidden');
+      const staffId = select.value;
+      const staffName = select.selectedOptions[0]?.dataset.name;
+      if (!staffId) { errorEl.textContent = 'Select a staff member first.'; errorEl.classList.remove('hidden'); return; }
+
+      const today = new Date().toISOString().slice(0, 10);
+      const { data: existing } = await sbClient.from('attendance').select('id').eq('organization_id', userOrgId).eq('staff_id', staffId).eq('date', today).maybeSingle();
+      if (existing) { errorEl.textContent = 'Already signed in today.'; errorEl.classList.remove('hidden'); return; }
+
+      const { error } = await sbClient.from('attendance').insert({
+        organization_id: userOrgId, staff_id: staffId, name: staffName, time_in: new Date().toISOString(), date: today
+      });
+      if (error) { errorEl.textContent = 'Sign-in failed: ' + error.message; errorEl.classList.remove('hidden'); return; }
+      loadTodayAttendance();
+    }
+
+    async function handleStaffSignOut() {
+      const select = document.getElementById('staff-select');
+      const errorEl = document.getElementById('staff-action-error');
+      errorEl.classList.add('hidden');
+      const staffId = select.value;
+      if (!staffId) { errorEl.textContent = 'Select a staff member first.'; errorEl.classList.remove('hidden'); return; }
+
+      const today = new Date().toISOString().slice(0, 10);
+      const { data: existing } = await sbClient.from('attendance').select('id').eq('organization_id', userOrgId).eq('staff_id', staffId).eq('date', today).maybeSingle();
+      if (!existing) { errorEl.textContent = 'No sign-in found for today.'; errorEl.classList.remove('hidden'); return; }
+
+      const { error } = await sbClient.from('attendance').update({ time_out: new Date().toISOString() }).eq('id', existing.id);
+      if (error) { errorEl.textContent = 'Sign-out failed: ' + error.message; errorEl.classList.remove('hidden'); return; }
+      loadTodayAttendance();
+    }
+
+    async function loadTodayAttendance() {
+      const wrap = document.getElementById('attendance-table-wrap');
+      if (!wrap) return;
+      const today = new Date().toISOString().slice(0, 10);
+      const { data, error } = await sbClient.from('attendance').select('*').eq('organization_id', userOrgId).eq('date', today).order('time_in', { ascending: false });
+
+      if (error) { wrap.innerHTML = `<div class="p-6 text-center text-red-500 text-sm">Error loading attendance: ${error.message}</div>`; return; }
+      if (!data || data.length === 0) { wrap.innerHTML = `<div class="p-6 text-center text-slate-400 text-sm">No attendance recorded yet today.</div>`; return; }
 
       wrap.innerHTML = `
         <table class="w-full text-sm text-left">
           <thead class="bg-slate-50 text-slate-500 uppercase text-xs font-bold">
-            <tr>
-              <th class="px-4 py-3">Staff ID</th>
-              <th class="px-4 py-3">Name</th>
-              <th class="px-4 py-3">Type</th>
-              <th class="px-4 py-3">End Date</th>
-              <th class="px-4 py-3">Status</th>
-            </tr>
+            <tr><th class="px-4 py-3">Name</th><th class="px-4 py-3">In</th><th class="px-4 py-3">Out</th></tr>
           </thead>
           <tbody class="divide-y divide-slate-100">
-            ${staffList.map(s => {
-              const isActive = !s.end_date || new Date(s.end_date) > new Date();
-              return `
-                <tr>
-                  <td class="px-4 py-3 font-mono text-xs text-slate-500">${s.staff_id ?? '—'}</td>
-                  <td class="px-4 py-3 font-medium text-slate-800">${s.name ?? '—'}</td>
-                  <td class="px-4 py-3">${s.type ?? '—'}</td>
-                  <td class="px-4 py-3">${s.end_date ?? '—'}</td>
-                  <td class="px-4 py-3">${isActive ? '<span class="text-emerald-600 font-semibold">Active</span>' : '<span class="text-slate-400">Ended</span>'}</td>
-                </tr>
-              `;
-            }).join('')}
+            ${data.map(a => `
+              <tr>
+                <td class="px-4 py-3 font-medium text-slate-800">${a.name ?? '—'}</td>
+                <td class="px-4 py-3">${a.time_in ? new Date(a.time_in).toLocaleTimeString() : '—'}</td>
+                <td class="px-4 py-3">${a.time_out ? new Date(a.time_out).toLocaleTimeString() : '<span class="text-emerald-600 font-semibold">Still in</span>'}</td>
+              </tr>
+            `).join('')}
           </tbody>
         </table>
       `;
+    }
+
+    // ===================== EVENTS TAB =====================
+    function renderEventsTab(container) {
+      container.innerHTML = `
+        <div class="space-y-6">
+          <div class="bg-white border border-slate-200 rounded-xl p-6 space-y-3">
+            <h4 class="text-base font-bold text-slate-900">Events</h4>
+            <input type="text" id="event-search" placeholder="Search events by title" class="field-input">
+            <button onclick="toggleNewEventForm()" class="btn-primary">+ New Event</button>
+            <div id="new-event-form" class="hidden space-y-3 pt-3 border-t border-slate-100">
+              <input type="text" id="new-event-title" placeholder="Event title (e.g. Youth Forum - July 2026)" class="field-input">
+              <p class="text-xs text-slate-500">List the details you want to capture, separated by commas (e.g. Name, ID Number, Phone, Organization)</p>
+              <input type="text" id="new-event-fields" placeholder="Name, ID Number, Phone" class="field-input">
+              <div class="grid grid-cols-2 gap-3">
+                <button onclick="handleCreateEvent()" class="py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-semibold rounded-xl transition">Create Event</button>
+                <button onclick="toggleNewEventForm()" class="py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-xl transition">Cancel</button>
+              </div>
+            </div>
+          </div>
+          <div id="events-list-wrap" class="space-y-3">
+            <div class="text-center text-slate-400 text-sm py-4">Loading events…</div>
+          </div>
+        </div>
+      `;
+      document.getElementById('event-search').addEventListener('input', (e) => renderEventsList(filterEvents(e.target.value)));
+      loadEvents();
+    }
+
+    function toggleNewEventForm() {
+      document.getElementById('new-event-form').classList.toggle('hidden');
+    }
+
+    async function handleCreateEvent() {
+      const title = document.getElementById('new-event-title').value.trim();
+      const fields = document.getElementById('new-event-fields').value.trim();
+      if (!title) { alert('Event title is required.'); return; }
+      const { error } = await sbClient.from('events').insert({ organization_id: userOrgId, title, fields: fields || null });
+      if (error) { alert('Failed to create event: ' + error.message); return; }
+      document.getElementById('new-event-title').value = '';
+      document.getElementById('new-event-fields').value = '';
+      document.getElementById('new-event-form').classList.add('hidden');
+      await loadEvents();
+    }
+
+    async function loadEvents() {
+      const wrap = document.getElementById('events-list-wrap');
+      const { data, error } = await sbClient.from('events').select('*').eq('organization_id', userOrgId).order('created_at', { ascending: false });
+      if (error) { wrap.innerHTML = `<div class="p-6 text-center text-red-500 text-sm">Error loading events: ${error.message}</div>`; return; }
+      eventsCache = data || [];
+      renderEventsList(eventsCache);
+    }
+
+    function filterEvents(query) {
+      const q = query.trim().toLowerCase();
+      if (!q) return eventsCache;
+      return eventsCache.filter(e => (e.title || '').toLowerCase().includes(q));
+    }
+
+    function renderEventsList(events) {
+      const wrap = document.getElementById('events-list-wrap');
+      if (!events || events.length === 0) { wrap.innerHTML = `<div class="text-center text-slate-400 text-sm py-4">No events yet. Tap "+ New Event" to create one.</div>`; return; }
+
+      wrap.innerHTML = events.map(ev => {
+        const fieldNames = (ev.fields || '').split(',').map(f => f.trim()).filter(Boolean);
+        const inputs = fieldNames.map((f, i) => `<input type="text" id="ev-${ev.id}-field-${i}" data-field-name="${f}" placeholder="${f}" class="field-input">`).join('');
+        return `
+          <div class="bg-slate-50 border border-slate-100 rounded-xl p-5 space-y-3">
+            <div class="flex justify-between items-center">
+              <h5 class="font-bold text-slate-900">${ev.title}</h5>
+              <button onclick="toggleEventCheckinForm(${ev.id})" class="text-xs font-semibold py-1.5 px-3 bg-slate-900 text-white rounded-lg">Check In</button>
+            </div>
+            <div id="event-checkin-form-${ev.id}" class="hidden space-y-2 pt-2 border-t border-slate-200">
+              ${inputs || '<p class="text-xs text-slate-400">No custom fields defined for this event.</p>'}
+              <button onclick="handleEventCheckin(${ev.id})" class="btn-primary text-sm py-2">Submit Check-In</button>
+              <p id="event-checkin-error-${ev.id}" class="text-red-500 text-xs text-center hidden"></p>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function toggleEventCheckinForm(eventId) {
+      document.getElementById(`event-checkin-form-${eventId}`).classList.toggle('hidden');
+    }
+
+    async function handleEventCheckin(eventId) {
+      const data = {};
+      document.querySelectorAll(`[id^="ev-${eventId}-field-"]`).forEach(input => { data[input.dataset.fieldName] = input.value; });
+      const errorEl = document.getElementById(`event-checkin-error-${eventId}`);
+      const { error } = await sbClient.from('event_checkins').insert({ event_id: eventId, organization_id: userOrgId, data });
+      if (error) { errorEl.textContent = 'Check-in failed: ' + error.message; errorEl.classList.remove('hidden'); return; }
+      alert('Checked in successfully!');
+      document.getElementById(`event-checkin-form-${eventId}`).classList.add('hidden');
+    }
+
+    // ===================== HISTORY TAB =====================
+    function renderHistoryTab(container) {
+      container.innerHTML = `
+        <div class="space-y-6">
+          <div class="bg-white border border-slate-200 rounded-xl p-6 space-y-3">
+            <h4 class="text-base font-bold text-slate-900">History Search</h4>
+            <p class="text-sm text-slate-500">Search visitor and staff records for any past date.</p>
+            <input type="date" id="history-date" class="field-input">
+            <button onclick="handleHistorySearch()" class="btn-primary">Search</button>
+          </div>
+          <div>
+            <h5 class="font-bold text-slate-900 mb-2">Visitors that day</h5>
+            <div id="history-visitors-wrap" class="bg-white border border-slate-200 rounded-xl overflow-x-auto">
+              <div class="p-6 text-center text-slate-400 text-sm">Pick a date and search.</div>
+            </div>
+          </div>
+          <div>
+            <h5 class="font-bold text-slate-900 mb-2">Staff attendance that day</h5>
+            <div id="history-attendance-wrap" class="bg-white border border-slate-200 rounded-xl overflow-x-auto">
+              <div class="p-6 text-center text-slate-400 text-sm">Pick a date and search.</div>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    async function handleHistorySearch() {
+      const date = document.getElementById('history-date').value;
+      const vWrap = document.getElementById('history-visitors-wrap');
+      const aWrap = document.getElementById('history-attendance-wrap');
+      if (!date) { alert('Pick a date first.'); return; }
+
+      const dayStart = `${date}T00:00:00`;
+      const dayEnd = `${date}T23:59:59`;
+
+      const { data: visitors, error: vErr } = await sbClient.from('visitors').select('*')
+        .eq('organization_id', userOrgId).gte('time', dayStart).lte('time', dayEnd).order('time');
+      if (vErr) { vWrap.innerHTML = `<div class="p-6 text-center text-red-500 text-sm">${vErr.message}</div>`; }
+      else if (!visitors || visitors.length === 0) { vWrap.innerHTML = `<div class="p-6 text-center text-slate-400 text-sm">No visitors that day.</div>`; }
+      else {
+        vWrap.innerHTML = `<table class="w-full text-sm text-left"><thead class="bg-slate-50 text-slate-500 uppercase text-xs font-bold"><tr><th class="px-4 py-3">Name</th><th class="px-4 py-3">ID</th><th class="px-4 py-3">Time</th></tr></thead><tbody class="divide-y divide-slate-100">${visitors.map(v => `<tr><td class="px-4 py-3">${v.name ?? '—'}</td><td class="px-4 py-3 font-mono text-xs">${v.visitor_id ?? '—'}</td><td class="px-4 py-3">${v.time ? new Date(v.time).toLocaleTimeString() : '—'}</td></tr>`).join('')}</tbody></table>`;
+      }
+
+      const { data: attendance, error: aErr } = await sbClient.from('attendance').select('*')
+        .eq('organization_id', userOrgId).eq('date', date).order('time_in');
+      if (aErr) { aWrap.innerHTML = `<div class="p-6 text-center text-red-500 text-sm">${aErr.message}</div>`; }
+      else if (!attendance || attendance.length === 0) { aWrap.innerHTML = `<div class="p-6 text-center text-slate-400 text-sm">No staff attendance that day.</div>`; }
+      else {
+        aWrap.innerHTML = `<table class="w-full text-sm text-left"><thead class="bg-slate-50 text-slate-500 uppercase text-xs font-bold"><tr><th class="px-4 py-3">Name</th><th class="px-4 py-3">In</th><th class="px-4 py-3">Out</th></tr></thead><tbody class="divide-y divide-slate-100">${attendance.map(a => `<tr><td class="px-4 py-3">${a.name ?? '—'}</td><td class="px-4 py-3">${a.time_in ? new Date(a.time_in).toLocaleTimeString() : '—'}</td><td class="px-4 py-3">${a.time_out ? new Date(a.time_out).toLocaleTimeString() : '—'}</td></tr>`).join('')}</tbody></table>`;
+      }
+    }
+
+    // ===================== APPRAISAL TAB =====================
+    let lastAppraisalRows = [];
+
+    function renderAppraisalTab(container) {
+      const staffOptions = staffListCache.map(s => `<option value="${s.staff_id}">${s.name}</option>`).join('');
+      container.innerHTML = `
+        <div class="space-y-4 max-w-xl">
+          <h4 class="text-base font-bold text-slate-900">Staff Appraisal</h4>
+          <div class="grid grid-cols-2 gap-3">
+            <input type="date" id="appraisal-start" class="field-input">
+            <input type="date" id="appraisal-end" class="field-input">
+          </div>
+          <select id="appraisal-staff" class="field-input">
+            <option value="">All Staff</option>
+            ${staffOptions}
+          </select>
+          <div>
+            <label class="text-xs font-bold text-slate-500 uppercase tracking-wider">Workday starts at</label>
+            <input type="time" id="appraisal-workday-start" value="08:00" class="field-input">
+          </div>
+          <button onclick="handleGenerateAppraisal()" class="btn-primary">Generate</button>
+          <button onclick="handleExportAppraisal()" class="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-sm rounded-xl transition">Export Excel</button>
+          <div id="appraisal-results-wrap" class="pt-2"></div>
+        </div>
+      `;
+    }
+
+    async function handleGenerateAppraisal() {
+      const start = document.getElementById('appraisal-start').value;
+      const end = document.getElementById('appraisal-end').value;
+      const staffFilter = document.getElementById('appraisal-staff').value;
+      const workdayStart = document.getElementById('appraisal-workday-start').value;
+      const wrap = document.getElementById('appraisal-results-wrap');
+
+      if (!start || !end) { alert('Pick a start and end date.'); return; }
+
+      let query = sbClient.from('attendance').select('*').eq('organization_id', userOrgId).gte('date', start).lte('date', end);
+      if (staffFilter) query = query.eq('staff_id', staffFilter);
+      const { data, error } = await query;
+
+      if (error) { wrap.innerHTML = `<div class="p-4 text-red-500 text-sm">${error.message}</div>`; return; }
+
+      const [wh, wm] = workdayStart.split(':').map(Number);
+      const byStaff = {};
+      (data || []).forEach(a => {
+        const key = a.staff_id;
+        if (!byStaff[key]) byStaff[key] = { name: a.name, staff_id: a.staff_id, totalDays: 0, lateDays: 0 };
+        byStaff[key].totalDays++;
+        if (a.time_in) {
+          const t = new Date(a.time_in);
+          const minutes = t.getHours() * 60 + t.getMinutes();
+          if (minutes > wh * 60 + wm) byStaff[key].lateDays++;
+        }
+      });
+
+      lastAppraisalRows = Object.values(byStaff);
+
+      if (lastAppraisalRows.length === 0) { wrap.innerHTML = `<div class="p-4 text-slate-400 text-sm text-center">No attendance records in this range.</div>`; return; }
+
+      wrap.innerHTML = `
+        <table class="w-full text-sm text-left border border-slate-200 rounded-xl overflow-hidden">
+          <thead class="bg-slate-50 text-slate-500 uppercase text-xs font-bold">
+            <tr><th class="px-4 py-3">Name</th><th class="px-4 py-3">Days Present</th><th class="px-4 py-3">Late Days</th></tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100">
+            ${lastAppraisalRows.map(r => `<tr><td class="px-4 py-3 font-medium">${r.name}</td><td class="px-4 py-3">${r.totalDays}</td><td class="px-4 py-3">${r.lateDays}</td></tr>`).join('')}
+          </tbody>
+        </table>
+      `;
+    }
+
+    function handleExportAppraisal() {
+      if (!lastAppraisalRows || lastAppraisalRows.length === 0) { alert('Generate a report first.'); return; }
+      const ws = XLSX.utils.json_to_sheet(lastAppraisalRows.map(r => ({ Name: r.name, 'Staff ID': r.staff_id, 'Days Present': r.totalDays, 'Late Days': r.lateDays })));
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Appraisal');
+      XLSX.writeFile(wb, 'staff_appraisal.xlsx');
+    }
+
+    // ===================== SETTINGS TAB =====================
+    function renderSettingsTab(container) {
+      const officeItems = officesList.map(o => `
+        <div class="flex justify-between items-center px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm">
+          <span>${o.name}</span>
+          <button onclick="handleRemoveOffice(${o.id})" class="text-red-400 hover:text-red-600 text-xs font-semibold">Remove</button>
+        </div>
+      `).join('');
+
+      const fieldItems = (orgSettings.extra_visitor_fields || []).map((f, i) => `
+        <div class="flex justify-between items-center px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm">
+          <span>${f}</span>
+          <button onclick="handleRemoveExtraField(${i})" class="text-red-400 hover:text-red-600 text-xs font-semibold">Remove</button>
+        </div>
+      `).join('');
+
+      container.innerHTML = `
+        <div class="max-w-xl space-y-8">
+          <div class="space-y-3">
+            <h4 class="text-base font-bold text-slate-900">Organization Branding</h4>
+            <input type="text" id="setting-name" value="${orgSettings.org_name || ''}" placeholder="Organization Name" class="field-input">
+            <input type="text" id="setting-tagline" value="${orgSettings.tagline || ''}" placeholder="Tagline" class="field-input">
+            <div>
+              <label class="text-xs font-bold text-slate-500 uppercase tracking-wider">Primary Color</label>
+              <input type="color" id="setting-color" value="${orgSettings.primary_color || '#2563eb'}" class="w-full h-12 border border-slate-200 rounded-xl">
+            </div>
+            <input type="text" id="setting-logo" value="${orgSettings.logo_url || ''}" placeholder="Logo image URL (optional)" class="field-input">
+          </div>
+
+          <div class="space-y-3">
+            <h4 class="text-base font-bold text-slate-900">Staff Attendance Rules</h4>
+            <div>
+              <label class="text-xs text-slate-500">Sign-in is late after:</label>
+              <input type="time" id="setting-late-after" value="${orgSettings.late_after || '08:05'}" class="field-input">
+            </div>
+            <div>
+              <label class="text-xs text-slate-500">Earliest allowed sign-out:</label>
+              <input type="time" id="setting-earliest-signout" value="${orgSettings.earliest_signout || '17:00'}" class="field-input">
+            </div>
+          </div>
+
+          <button onclick="handleSaveSettings()" class="btn-primary">Save Branding & Rules</button>
+          <p id="settings-save-msg" class="text-emerald-600 text-sm text-center font-medium hidden">Saved!</p>
+
+          <div class="space-y-3 pt-4 border-t border-slate-100">
+            <h4 class="text-base font-bold text-slate-900">Departments</h4>
+            <input type="text" id="new-department" placeholder="Add Department" class="field-input">
+            <button onclick="handleAddDepartment()" class="btn-primary">Add Department</button>
+            <div class="space-y-2">${officeItems || '<p class="text-xs text-slate-400 text-center">No departments added — this is optional, skip it if not needed.</p>'}</div>
+          </div>
+
+          <div class="space-y-3 pt-4 border-t border-slate-100">
+            <h4 class="text-base font-bold text-slate-900">Extra Visitor Fields</h4>
+            <p class="text-xs text-slate-500">By default visitors give ID, Name, Phone, Office and Purpose. Add any extra detail your organization needs (e.g. Vehicle Number, Company).</p>
+            <input type="text" id="new-extra-field" placeholder="e.g. Vehicle Number" class="field-input">
+            <button onclick="handleAddExtraField()" class="btn-primary">Add Field</button>
+            <div class="space-y-2">${fieldItems || '<p class="text-xs text-slate-400 text-center">No extra fields added.</p>'}</div>
+          </div>
+
+          <div class="space-y-3 pt-4 border-t border-slate-100">
+            <h4 class="text-base font-bold text-slate-900">Data</h4>
+            <button onclick="handleDownloadBackup()" class="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-sm rounded-xl transition">Download Backup (JSON)</button>
+          </div>
+        </div>
+      `;
+    }
+
+    async function handleSaveSettings() {
+      const newName = document.getElementById('setting-name').value;
+      const newTagline = document.getElementById('setting-tagline').value;
+      const newColor = document.getElementById('setting-color').value;
+      const newLogo = document.getElementById('setting-logo').value;
+      const lateAfter = document.getElementById('setting-late-after').value;
+      const earliestSignout = document.getElementById('setting-earliest-signout').value;
+
+      const { error } = await sbClient.from('org_settings').update({
+        org_name: newName, tagline: newTagline, primary_color: newColor, logo_url: newLogo,
+        late_after: lateAfter, earliest_signout: earliestSignout
+      }).eq('organization_id', userOrgId);
+
+      if (error) { alert('Save failed: ' + error.message); return; }
+      await loadOrganizationSettings();
+      const msg = document.getElementById('settings-save-msg');
+      msg.classList.remove('hidden');
+      setTimeout(() => msg.classList.add('hidden'), 2000);
+    }
+
+    async function handleAddDepartment() {
+      const input = document.getElementById('new-department');
+      const name = input.value.trim();
+      if (!name) return;
+      const { error } = await sbClient.from('offices').insert({ organization_id: userOrgId, name });
+      if (error) { alert('Failed to add department: ' + error.message); return; }
+      input.value = '';
+      await loadOffices();
+      switchTab('settings');
+    }
+
+    async function handleRemoveOffice(id) {
+      const { error } = await sbClient.from('offices').delete().eq('id', id);
+      if (error) { alert('Failed to remove: ' + error.message); return; }
+      await loadOffices();
+      switchTab('settings');
+    }
+
+    async function handleAddExtraField() {
+      const input = document.getElementById('new-extra-field');
+      const name = input.value.trim();
+      if (!name) return;
+      const updated = [...(orgSettings.extra_visitor_fields || []), name];
+      const { error } = await sbClient.from('org_settings').update({ extra_visitor_fields: updated }).eq('organization_id', userOrgId);
+      if (error) { alert('Failed to add field: ' + error.message); return; }
+      input.value = '';
+      await loadOrganizationSettings();
+      switchTab('settings');
+    }
+
+    async function handleRemoveExtraField(index) {
+      const updated = (orgSettings.extra_visitor_fields || []).filter((_, i) => i !== index);
+      const { error } = await sbClient.from('org_settings').update({ extra_visitor_fields: updated }).eq('organization_id', userOrgId);
+      if (error) { alert('Failed to remove field: ' + error.message); return; }
+      await loadOrganizationSettings();
+      switchTab('settings');
+    }
+
+    async function handleDownloadBackup() {
+      const [visitors, staff, attendance, events, eventCheckins] = await Promise.all([
+        sbClient.from('visitors').select('*').eq('organization_id', userOrgId),
+        sbClient.from('staff').select('*').eq('organization_id', userOrgId),
+        sbClient.from('attendance').select('*').eq('organization_id', userOrgId),
+        sbClient.from('events').select('*').eq('organization_id', userOrgId),
+        sbClient.from('event_checkins').select('*').eq('organization_id', userOrgId)
+      ]);
+
+      const backup = {
+        exported_at: new Date().toISOString(),
+        organization_id: userOrgId,
+        org_settings: orgSettings,
+        offices: officesList,
+        visitors: visitors.data || [],
+        staff: staff.data || [],
+        attendance: attendance.data || [],
+        events: events.data || [],
+        event_checkins: eventCheckins.data || []
+      };
+
+      const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `smart-reception-backup-${new Date().toISOString().slice(0,10)}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
     }
 
     async function handleLogout() {
