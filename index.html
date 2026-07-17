@@ -264,18 +264,23 @@
           <div class="bg-slate-50 rounded-xl p-6 border border-slate-100 space-y-4">
             <h4 class="text-base font-bold text-slate-900"><i class="fa-solid fa-person-walking-arrow-right mr-2 text-slate-400"></i>Active Visitors Portal</h4>
             <p class="text-sm text-slate-500 leading-relaxed">This data feed is isolated securely for organization anchor: <span class="bg-white border px-2 py-0.5 rounded font-mono text-xs font-bold text-slate-700">${userOrgId}</span>.</p>
-            <div class="h-32 flex items-center justify-center border border-dashed border-slate-200 rounded-xl bg-white text-slate-400 text-sm">
-               Visitor check-in forms and history engine fully safe under multi-tenant filtering rules.
+            <div id="visitors-table-wrap" class="bg-white border border-slate-200 rounded-xl overflow-x-auto">
+              <div class="p-6 text-center text-slate-400 text-sm">Loading visitors…</div>
             </div>
           </div>
         `;
+        loadVisitorsTable();
       } else if (tab === 'staff') {
         container.innerHTML = `
           <div class="bg-slate-50 rounded-xl p-6 border border-slate-100 space-y-4">
             <h4 class="text-base font-bold text-slate-900"><i class="fa-solid fa-user-clock mr-2 text-slate-400"></i>Staff Verification & Rosters</h4>
             <p class="text-sm text-slate-500">Live check-in logging tied to Organization database pointer.</p>
+            <div id="staff-table-wrap" class="bg-white border border-slate-200 rounded-xl overflow-x-auto">
+              <div class="p-6 text-center text-slate-400 text-sm">Loading staff…</div>
+            </div>
           </div>
         `;
+        loadStaffTable();
       } else if (tab === 'settings') {
         container.innerHTML = `
           <div class="max-w-xl space-y-5 bg-white border border-slate-200/60 p-6 rounded-xl shadow-sm">
@@ -322,6 +327,118 @@
         alert("Branding metrics saved across the grid!");
         await loadOrganizationSettings();
       }
+    }
+
+    // Load and render the visitors table using actual schema columns
+    async function loadVisitorsTable() {
+      const wrap = document.getElementById('visitors-table-wrap');
+
+      const { data: visitors, error } = await sbClient
+        .from('visitors')
+        .select('id, visitor_id, name, phone, office, purpose, time, time_out, host_id')
+        .eq('organization_id', userOrgId)
+        .order('time', { ascending: false });
+
+      if (error) {
+        wrap.innerHTML = `<div class="p-6 text-center text-red-500 text-sm">Error loading visitors: ${error.message}</div>`;
+        return;
+      }
+
+      if (!visitors || visitors.length === 0) {
+        wrap.innerHTML = `<div class="p-6 text-center text-slate-400 text-sm">No visitors checked in yet.</div>`;
+        return;
+      }
+
+      // Look up host names for any visitors that have a host_id
+      const hostIds = [...new Set(visitors.map(v => v.host_id).filter(Boolean))];
+      let hostNames = {};
+      if (hostIds.length > 0) {
+        const { data: hosts } = await sbClient
+          .from('staff')
+          .select('id, name')
+          .in('id', hostIds);
+        (hosts || []).forEach(h => { hostNames[h.id] = h.name; });
+      }
+
+      wrap.innerHTML = `
+        <table class="w-full text-sm text-left">
+          <thead class="bg-slate-50 text-slate-500 uppercase text-xs font-bold">
+            <tr>
+              <th class="px-4 py-3">Visitor ID</th>
+              <th class="px-4 py-3">Name</th>
+              <th class="px-4 py-3">Phone</th>
+              <th class="px-4 py-3">Office</th>
+              <th class="px-4 py-3">Purpose</th>
+              <th class="px-4 py-3">Host</th>
+              <th class="px-4 py-3">Time In</th>
+              <th class="px-4 py-3">Time Out</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100">
+            ${visitors.map(v => `
+              <tr>
+                <td class="px-4 py-3 font-mono text-xs text-slate-500">${v.visitor_id ?? '—'}</td>
+                <td class="px-4 py-3 font-medium text-slate-800">${v.name ?? '—'}</td>
+                <td class="px-4 py-3">${v.phone ?? '—'}</td>
+                <td class="px-4 py-3">${v.office ?? '—'}</td>
+                <td class="px-4 py-3">${v.purpose ?? '—'}</td>
+                <td class="px-4 py-3">${hostNames[v.host_id] ?? '—'}</td>
+                <td class="px-4 py-3">${v.time ? new Date(v.time).toLocaleString() : '—'}</td>
+                <td class="px-4 py-3">${v.time_out ? new Date(v.time_out).toLocaleString() : '<span class="text-emerald-600 font-semibold">Still in</span>'}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      `;
+    }
+
+    // Load and render the staff table using actual schema columns
+    async function loadStaffTable() {
+      const wrap = document.getElementById('staff-table-wrap');
+
+      const { data: staffList, error } = await sbClient
+        .from('staff')
+        .select('id, staff_id, name, type, end_date')
+        .eq('organization_id', userOrgId)
+        .order('name', { ascending: true });
+
+      if (error) {
+        wrap.innerHTML = `<div class="p-6 text-center text-red-500 text-sm">Error loading staff: ${error.message}</div>`;
+        return;
+      }
+
+      if (!staffList || staffList.length === 0) {
+        wrap.innerHTML = `<div class="p-6 text-center text-slate-400 text-sm">No staff members added yet.</div>`;
+        return;
+      }
+
+      wrap.innerHTML = `
+        <table class="w-full text-sm text-left">
+          <thead class="bg-slate-50 text-slate-500 uppercase text-xs font-bold">
+            <tr>
+              <th class="px-4 py-3">Staff ID</th>
+              <th class="px-4 py-3">Name</th>
+              <th class="px-4 py-3">Type</th>
+              <th class="px-4 py-3">End Date</th>
+              <th class="px-4 py-3">Status</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100">
+            ${staffList.map(s => {
+              const isActive = !s.end_date || new Date(s.end_date) > new Date();
+              return `
+                <tr>
+                  <td class="px-4 py-3 font-mono text-xs text-slate-500">${s.staff_id ?? '—'}</td>
+                  <td class="px-4 py-3 font-medium text-slate-800">${s.name ?? '—'}</td>
+                  <td class="px-4 py-3">${s.type ?? '—'}</td>
+                  <td class="px-4 py-3">${s.end_date ?? '—'}</td>
+                  <td class="px-4 py-3">${isActive ? '<span class="text-emerald-600 font-semibold">Active</span>' : '<span class="text-slate-400">Ended</span>'}</td>
+                </tr>
+              `;
+            }).join('')}
+          </tbody>
+        </table>
+      `;
     }
 
     async function handleLogout() {
