@@ -662,26 +662,43 @@
       const wrap = document.getElementById('events-list-wrap');
       if (!events || events.length === 0) { wrap.innerHTML = `<div class="text-center text-slate-400 text-sm py-4">No events yet. Tap "+ New Event" to create one.</div>`; return; }
 
-      wrap.innerHTML = events.map(ev => {
-        const fieldNames = (ev.fields || '').split(',').map(f => f.trim()).filter(Boolean);
-        const inputs = fieldNames.map((f, i) => `<input type="text" id="ev-${ev.id}-field-${i}" data-field-name="${f}" placeholder="${f}" class="field-input">`).join('');
-        return `
-          <div class="bg-slate-50 border border-slate-100 rounded-xl p-5 space-y-3">
-            <div class="flex justify-between items-center gap-2">
-              <h5 class="font-bold text-slate-900">${ev.title}</h5>
-              <div class="flex items-center gap-2">
-                <button onclick="toggleEventCheckinForm(${ev.id})" class="text-xs font-semibold py-1.5 px-3 brand-bg text-white rounded-lg">Check In</button>
-                <button onclick="handleDeleteEvent(${ev.id})" class="text-red-400 hover:text-red-600 text-xs font-semibold"><i class="fa-solid fa-trash"></i></button>
-              </div>
-            </div>
-            <div id="event-checkin-form-${ev.id}" class="hidden space-y-2 pt-2 border-t border-slate-200">
-              ${inputs || '<p class="text-xs text-slate-400">No custom fields defined for this event.</p>'}
-              <button onclick="handleEventCheckin(${ev.id})" class="btn-primary text-sm py-2">Submit Check-In</button>
-              <p id="event-checkin-error-${ev.id}" class="text-red-500 text-xs text-center hidden"></p>
-            </div>
-          </div>
-        `;
-      }).join('');
+      wrap.innerHTML = `
+        <div class="bg-white border border-slate-200 rounded-xl overflow-x-auto">
+          <table class="w-full text-sm text-left">
+            <thead class="bg-slate-50 text-slate-500 uppercase text-xs font-bold">
+              <tr><th class="px-4 py-3">Title</th><th class="px-4 py-3">Custom Fields</th><th class="px-4 py-3">Created</th><th class="px-4 py-3"></th></tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100">
+              ${events.map(ev => `
+                <tr>
+                  <td class="px-4 py-3 font-medium text-slate-800">${ev.title}</td>
+                  <td class="px-4 py-3 text-slate-500 text-xs">${ev.fields || '—'}</td>
+                  <td class="px-4 py-3 text-slate-500 text-xs">${ev.created_at ? new Date(ev.created_at).toLocaleDateString() : '—'}</td>
+                  <td class="px-4 py-3 whitespace-nowrap">
+                    <button onclick="toggleEventCheckinForm(${ev.id})" class="text-xs font-semibold py-1 px-2.5 brand-bg text-white rounded-lg mr-2">Check In</button>
+                    <button onclick="handleDeleteEvent(${ev.id})" class="text-red-400 hover:text-red-600 text-xs font-semibold"><i class="fa-solid fa-trash"></i></button>
+                  </td>
+                </tr>
+                <tr id="event-checkin-row-${ev.id}" class="hidden">
+                  <td colspan="4" class="px-4 pb-4 bg-slate-50">
+                    <div class="space-y-2 pt-3">
+                      ${buildEventFieldInputs(ev)}
+                      <button onclick="handleEventCheckin(${ev.id})" class="btn-primary text-sm py-2">Submit Check-In</button>
+                      <p id="event-checkin-error-${ev.id}" class="text-red-500 text-xs text-center hidden"></p>
+                    </div>
+                  </td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      `;
+    }
+
+    function buildEventFieldInputs(ev) {
+      const fieldNames = (ev.fields || '').split(',').map(f => f.trim()).filter(Boolean);
+      if (fieldNames.length === 0) return '<p class="text-xs text-slate-400">No custom fields defined for this event.</p>';
+      return fieldNames.map((f, i) => `<input type="text" id="ev-${ev.id}-field-${i}" data-field-name="${f}" placeholder="${f}" class="field-input">`).join('');
     }
 
     async function handleDeleteEvent(id) {
@@ -693,7 +710,7 @@
     }
 
     function toggleEventCheckinForm(eventId) {
-      document.getElementById(`event-checkin-form-${eventId}`).classList.toggle('hidden');
+      document.getElementById(`event-checkin-row-${eventId}`).classList.toggle('hidden');
     }
 
     async function handleEventCheckin(eventId) {
@@ -703,7 +720,7 @@
       const { error } = await sbClient.from('event_checkins').insert({ event_id: eventId, organization_id: userOrgId, data });
       if (error) { errorEl.textContent = 'Check-in failed: ' + error.message; errorEl.classList.remove('hidden'); return; }
       alert('Checked in successfully!');
-      document.getElementById(`event-checkin-form-${eventId}`).classList.add('hidden');
+      document.getElementById(`event-checkin-row-${eventId}`).classList.add('hidden');
     }
 
     // ===================== HISTORY TAB =====================
