@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -319,7 +320,7 @@
       wrap.innerHTML = `
         <table class="w-full text-sm text-left">
           <thead class="bg-slate-50 text-slate-500 uppercase text-xs font-bold">
-            <tr><th class="px-4 py-3">Name</th><th class="px-4 py-3">ID</th><th class="px-4 py-3">Phone</th><th class="px-4 py-3">Office</th><th class="px-4 py-3">Arrived</th><th class="px-4 py-3">Left</th></tr>
+            <tr><th class="px-4 py-3">Name</th><th class="px-4 py-3">ID</th><th class="px-4 py-3">Phone</th><th class="px-4 py-3">Office</th><th class="px-4 py-3">Arrived</th><th class="px-4 py-3">Left</th><th class="px-4 py-3"></th></tr>
           </thead>
           <tbody class="divide-y divide-slate-100">
             ${visitors.map(v => `
@@ -330,11 +331,19 @@
                 <td class="px-4 py-3">${v.office ?? '—'}</td>
                 <td class="px-4 py-3">${v.time ? new Date(v.time).toLocaleTimeString() : '—'}</td>
                 <td class="px-4 py-3">${v.time_out ? new Date(v.time_out).toLocaleTimeString() : '<span class="text-emerald-600 font-semibold">Still in</span>'}</td>
+                <td class="px-4 py-3"><button onclick="handleDeleteVisitor(${v.id})" class="text-red-400 hover:text-red-600 text-xs font-semibold"><i class="fa-solid fa-trash"></i></button></td>
               </tr>
             `).join('')}
           </tbody>
         </table>
       `;
+    }
+
+    async function handleDeleteVisitor(id) {
+      if (!confirm('Delete this visitor record? This cannot be undone.')) return;
+      const { error } = await sbClient.from('visitors').delete().eq('id', id);
+      if (error) { alert('Failed to delete: ' + error.message); return; }
+      await loadVisitorsTable();
     }
 
     // ===================== STAFF TAB =====================
@@ -417,11 +426,22 @@
           ${list.map(s => `
             <div class="flex justify-between items-center px-4 py-2.5 text-sm">
               <span class="font-medium text-slate-800">${s.name}</span>
-              <span class="text-slate-400 font-mono text-xs">${s.staff_id}</span>
+              <span class="flex items-center gap-3">
+                <span class="text-slate-400 font-mono text-xs">${s.staff_id}</span>
+                <button onclick="handleDeleteStaff(${s.id})" class="text-red-400 hover:text-red-600 text-xs font-semibold"><i class="fa-solid fa-trash"></i></button>
+              </span>
             </div>
           `).join('')}
         </div>
       `;
+    }
+
+    async function handleDeleteStaff(id) {
+      if (!confirm('Delete this staff member? This cannot be undone.')) return;
+      const { error } = await sbClient.from('staff').delete().eq('id', id);
+      if (error) { alert('Failed to delete: ' + error.message); return; }
+      await loadStaffCache();
+      switchTab('staff');
     }
 
     async function handleStaffSignIn() {
@@ -471,7 +491,7 @@
       wrap.innerHTML = `
         <table class="w-full text-sm text-left">
           <thead class="bg-slate-50 text-slate-500 uppercase text-xs font-bold">
-            <tr><th class="px-4 py-3">Name</th><th class="px-4 py-3">In</th><th class="px-4 py-3">Out</th></tr>
+            <tr><th class="px-4 py-3">Name</th><th class="px-4 py-3">In</th><th class="px-4 py-3">Out</th><th class="px-4 py-3"></th></tr>
           </thead>
           <tbody class="divide-y divide-slate-100">
             ${data.map(a => `
@@ -479,11 +499,19 @@
                 <td class="px-4 py-3 font-medium text-slate-800">${a.name ?? '—'}</td>
                 <td class="px-4 py-3">${a.time_in ? new Date(a.time_in).toLocaleTimeString() : '—'}</td>
                 <td class="px-4 py-3">${a.time_out ? new Date(a.time_out).toLocaleTimeString() : '<span class="text-emerald-600 font-semibold">Still in</span>'}</td>
+                <td class="px-4 py-3"><button onclick="handleDeleteAttendance(${a.id})" class="text-red-400 hover:text-red-600 text-xs font-semibold"><i class="fa-solid fa-trash"></i></button></td>
               </tr>
             `).join('')}
           </tbody>
         </table>
       `;
+    }
+
+    async function handleDeleteAttendance(id) {
+      if (!confirm('Delete this attendance record? This cannot be undone.')) return;
+      const { error } = await sbClient.from('attendance').delete().eq('id', id);
+      if (error) { alert('Failed to delete: ' + error.message); return; }
+      await loadTodayAttendance();
     }
 
     // ===================== EVENTS TAB =====================
@@ -552,9 +580,12 @@
         const inputs = fieldNames.map((f, i) => `<input type="text" id="ev-${ev.id}-field-${i}" data-field-name="${f}" placeholder="${f}" class="field-input">`).join('');
         return `
           <div class="bg-slate-50 border border-slate-100 rounded-xl p-5 space-y-3">
-            <div class="flex justify-between items-center">
+            <div class="flex justify-between items-center gap-2">
               <h5 class="font-bold text-slate-900">${ev.title}</h5>
-              <button onclick="toggleEventCheckinForm(${ev.id})" class="text-xs font-semibold py-1.5 px-3 bg-slate-900 text-white rounded-lg">Check In</button>
+              <div class="flex items-center gap-2">
+                <button onclick="toggleEventCheckinForm(${ev.id})" class="text-xs font-semibold py-1.5 px-3 bg-slate-900 text-white rounded-lg">Check In</button>
+                <button onclick="handleDeleteEvent(${ev.id})" class="text-red-400 hover:text-red-600 text-xs font-semibold"><i class="fa-solid fa-trash"></i></button>
+              </div>
             </div>
             <div id="event-checkin-form-${ev.id}" class="hidden space-y-2 pt-2 border-t border-slate-200">
               ${inputs || '<p class="text-xs text-slate-400">No custom fields defined for this event.</p>'}
@@ -564,6 +595,14 @@
           </div>
         `;
       }).join('');
+    }
+
+    async function handleDeleteEvent(id) {
+      if (!confirm('Delete this event and all its check-ins? This cannot be undone.')) return;
+      await sbClient.from('event_checkins').delete().eq('event_id', id);
+      const { error } = await sbClient.from('events').delete().eq('id', id);
+      if (error) { alert('Failed to delete: ' + error.message); return; }
+      await loadEvents();
     }
 
     function toggleEventCheckinForm(eventId) {
