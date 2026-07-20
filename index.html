@@ -10,25 +10,42 @@
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
   <style>
-    :root { --primary-color: #2563eb; }
-    body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
+    :root {
+      --primary-color: #d4af37;
+      --bg: #0f1225;
+      --surface: #161a35;
+      --surface-alt: #1e2242;
+      --text-main: #f1f5f9;
+      --text-muted: #94a3b8;
+      --border-color: #2d3252;
+    }
+    body { font-family: 'Inter', sans-serif; background-color: var(--bg); color: var(--text-main); }
     .brand-bg { background-color: var(--primary-color); }
     .brand-text { color: var(--primary-color); }
     .brand-border { border-color: var(--primary-color); }
-    .field-input { width: 100%; padding: 0.75rem; border: 1px solid #e2e8f0; border-radius: 0.75rem; }
+    .surface { background-color: var(--surface); }
+    .surface-alt { background-color: var(--surface-alt); }
+    .text-main { color: var(--text-main); }
+    .text-muted { color: var(--text-muted); }
+    .border-main { border-color: var(--border-color); }
+    .field-input { width: 100%; padding: 0.75rem; border: 1px solid var(--border-color); border-radius: 0.75rem; background-color: var(--surface-alt); color: var(--text-main); }
+    .field-input::placeholder { color: var(--text-muted); }
     .field-input:focus { outline: none; box-shadow: 0 0 0 2px var(--primary-color); }
-    .btn-primary { width: 100%; padding: 0.75rem; background-color: var(--primary-color); color: white; font-weight: 600; border-radius: 0.75rem; }
+    .btn-primary { width: 100%; padding: 0.75rem; background-color: var(--primary-color); color: #0f1225; font-weight: 700; border-radius: 0.75rem; }
+    .btn-secondary { background-color: var(--surface-alt); color: var(--text-main); border: 1px solid var(--border-color); }
+    table thead { background-color: var(--surface-alt) !important; color: var(--text-muted) !important; }
+    table tbody tr { border-color: var(--border-color) !important; }
   </style>
 </head>
-<body class="min-h-screen flex flex-col justify-between text-slate-800">
+<body class="min-h-screen flex flex-col justify-between">
 
-  <header id="app-header" class="brand-bg border-b border-slate-200 py-4 px-6 shadow-sm transition-colors">
+  <header id="app-header" class="brand-bg border-b border-main py-4 px-6 shadow-sm transition-colors">
     <div class="max-w-7xl mx-auto flex items-center justify-between">
       <div>
         <h1 id="header-org-name" class="text-2xl font-bold text-white tracking-tight">Smart Reception</h1>
         <p id="header-tagline" class="text-sm text-white/80 font-medium">Visitor & Staff Management System</p>
       </div>
-      <div id="logo-container" class="w-28 h-12 flex items-center justify-center border border-dashed border-white/40 rounded-lg bg-white/10 overflow-hidden">
+      <div id="logo-container" class="w-28 h-12 flex items-center justify-center border border-dashed border-white/40 rounded-lg surface/10 overflow-hidden">
         <span id="logo-placeholder" class="text-xs text-white/70 font-bold uppercase tracking-wider">Logo</span>
         <img id="logo-image" class="hidden h-full w-full object-contain p-1" alt="Client Logo">
       </div>
@@ -37,24 +54,24 @@
 
   <main class="flex-grow flex items-center justify-center p-6">
 
-    <div id="auth-screen" class="w-full max-w-md bg-white p-8 rounded-2xl shadow-xl border border-slate-100">
+    <div id="auth-screen" class="w-full max-w-md surface p-8 rounded-2xl shadow-xl border border-main">
       <div class="text-center mb-6">
-        <div class="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-blue-50 text-blue-600 mb-3 text-xl">
+        <div class="inline-flex items-center justify-center w-12 h-12 rounded-xl surface-alt brand-text mb-3 text-xl border border-main">
           <i class="fa-solid fa-shield-halved"></i>
         </div>
-        <h2 class="text-xl font-bold text-slate-900">Workspace Portal</h2>
-        <p class="text-sm text-slate-400 mt-1">Please sign in to access your dashboard</p>
+        <h2 class="text-xl font-bold text-main">Workspace Portal</h2>
+        <p class="text-sm text-muted mt-1">Please sign in to access your dashboard</p>
       </div>
       <form id="login-form" class="space-y-4">
         <div>
-          <label class="block text-sm font-semibold text-slate-700 mb-1">Email Address</label>
+          <label class="block text-sm font-semibold text-main mb-1">Email Address</label>
           <input type="email" id="login-email" required placeholder="name@company.com" class="field-input">
         </div>
         <div>
-          <label class="block text-sm font-semibold text-slate-700 mb-1">Password</label>
+          <label class="block text-sm font-semibold text-main mb-1">Password</label>
           <div class="relative">
             <input type="password" id="login-password" required placeholder="••••••••" class="field-input pr-10">
-            <button type="button" onclick="togglePasswordVisibility()" class="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600">
+            <button type="button" onclick="togglePasswordVisibility()" class="absolute inset-y-0 right-0 pr-3 flex items-center text-muted hover:text-muted">
               <i id="password-toggle-icon" class="fa-solid fa-eye"></i>
             </button>
           </div>
@@ -62,20 +79,46 @@
         <button type="submit" class="w-full py-3 brand-bg text-white font-semibold rounded-xl shadow-md transition">Sign In</button>
       </form>
       <p id="login-error" class="text-red-500 text-sm mt-3 text-center font-medium hidden"></p>
+      <button onclick="showScreen('reset-request-screen')" class="w-full text-center text-sm text-muted hover:text-muted mt-4">Forgot password?</button>
     </div>
 
-    <div id="app-workspace" class="hidden w-full max-w-7xl mx-auto bg-white rounded-2xl shadow-sm border border-slate-200/80 p-6 min-h-[500px]">
-      <div class="flex justify-between items-center mb-6 pb-4 border-b border-slate-100">
+    <div id="reset-request-screen" class="hidden w-full max-w-md surface p-8 rounded-2xl shadow-xl border border-main">
+      <div class="text-center mb-6">
+        <h2 class="text-xl font-bold text-main">Reset Password</h2>
+        <p class="text-sm text-muted mt-1">Enter your email and we'll send you a reset link</p>
+      </div>
+      <div class="space-y-4">
+        <input type="email" id="reset-email" required placeholder="name@company.com" class="field-input">
+        <button onclick="handleSendResetEmail()" class="w-full py-3 brand-bg text-white font-semibold rounded-xl shadow-md transition">Send Reset Link</button>
+        <p id="reset-request-msg" class="text-sm text-center font-medium hidden"></p>
+        <button onclick="showScreen('auth-screen')" class="w-full text-center text-sm text-muted hover:text-muted">Back to Sign In</button>
+      </div>
+    </div>
+
+    <div id="reset-password-screen" class="hidden w-full max-w-md surface p-8 rounded-2xl shadow-xl border border-main">
+      <div class="text-center mb-6">
+        <h2 class="text-xl font-bold text-main">Set New Password</h2>
+        <p class="text-sm text-muted mt-1">Choose a new password for your account</p>
+      </div>
+      <div class="space-y-4">
+        <input type="password" id="new-password" required placeholder="New password (min 6 characters)" class="field-input">
+        <button onclick="handleUpdatePassword()" class="w-full py-3 brand-bg text-white font-semibold rounded-xl shadow-md transition">Update Password</button>
+        <p id="reset-password-msg" class="text-sm text-center font-medium hidden"></p>
+      </div>
+    </div>
+
+    <div id="app-workspace" class="hidden w-full max-w-7xl mx-auto surface rounded-2xl shadow-sm border border-main p-6 min-h-[500px]">
+      <div class="flex justify-between items-center mb-6 pb-4 border-b border-main">
         <div>
-          <span class="text-xs font-bold uppercase tracking-widest text-slate-400">Control Center</span>
-          <h3 id="workspace-org-title" class="text-xl font-bold text-slate-800 mt-0.5">Workspace</h3>
+          <span class="text-xs font-bold uppercase tracking-widest text-muted">Control Center</span>
+          <h3 id="workspace-org-title" class="text-xl font-bold text-main mt-0.5">Workspace</h3>
         </div>
-        <button onclick="handleLogout()" class="py-2 px-4 bg-slate-50 hover:bg-slate-100 text-slate-600 rounded-xl text-sm font-semibold border border-slate-200 transition">
+        <button onclick="handleLogout()" class="py-2 px-4 surface-alt hover:surface-alt text-muted rounded-xl text-sm font-semibold border border-main transition">
           <i class="fa-solid fa-right-from-bracket mr-1.5"></i> Exit System
         </button>
       </div>
 
-      <div class="border-b border-slate-200 mb-6 flex flex-wrap gap-2">
+      <div class="border-b border-main mb-6 flex flex-wrap gap-2">
         <button id="btn-tab-visitors" onclick="switchTab('visitors')" class="py-2.5 px-4 font-semibold text-sm border-b-2 transition"><i class="fa-solid fa-users mr-2"></i>Visitors</button>
         <button id="btn-tab-staff" onclick="switchTab('staff')" class="py-2.5 px-4 font-semibold text-sm border-b-2 transition"><i class="fa-solid fa-id-card-clip mr-2"></i>Staff</button>
         <button id="btn-tab-events" onclick="switchTab('events')" class="py-2.5 px-4 font-semibold text-sm border-b-2 transition"><i class="fa-solid fa-calendar-days mr-2"></i>Events</button>
@@ -89,14 +132,35 @@
 
   </main>
 
-  <footer class="bg-white text-center py-4 border-t border-slate-200 text-xs text-slate-400 font-medium">
+  <footer class="surface text-center py-4 border-t border-main text-xs text-muted font-medium">
     Powered by Cloud Reception Multi-Tenant Network &copy; 2026
   </footer>
+
+  <div id="toast-container" class="fixed bottom-4 right-4 z-50 flex flex-col gap-2 items-end pointer-events-none"></div>
 
   <script>
     const supabaseUrl = "https://ygifkboqpoiqhdzfdasv.supabase.co";
     const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlnaWZrYm9xcG9pcWhkemZkYXN2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQxNjE3MDgsImV4cCI6MjA5OTczNzcwOH0.d1f-zZT9tvl4O7A_o3CQ_2r-gKOGEUrh3goGXiopCaY";
     const sbClient = supabase.createClient(supabaseUrl, supabaseKey);
+
+    // Lightweight toast notification (replaces alert() popups)
+    function showToast(message, type = 'error') {
+      const container = document.getElementById('toast-container');
+      const toast = document.createElement('div');
+      const colors = {
+        error: 'bg-red-500',
+        success: 'bg-emerald-500',
+        info: 'bg-slate-900'
+      };
+      toast.className = `${colors[type] || colors.error} text-white text-sm font-medium px-4 py-3 rounded-xl shadow-lg pointer-events-auto max-w-sm transition-opacity duration-300 opacity-0`;
+      toast.textContent = message;
+      container.appendChild(toast);
+      requestAnimationFrame(() => { toast.classList.remove('opacity-0'); });
+      setTimeout(() => {
+        toast.classList.add('opacity-0');
+        setTimeout(() => toast.remove(), 300);
+      }, 3500);
+    }
 
     let currentUser = null;
     let userOrgId = null;
@@ -134,7 +198,7 @@
       currentUser = user;
       userOrgId = user.user_metadata?.organization_id;
       if (!userOrgId) {
-        alert("System Configuration Error: This login account has no organization metadata link. Action Denied.");
+        showToast("System Configuration Error: This login account has no organization metadata link. Action Denied.", 'error');
         await handleLogout();
         return;
       }
@@ -171,10 +235,45 @@
     }
 
     function showScreen(screenId) {
-      document.getElementById('auth-screen').classList.add('hidden');
-      document.getElementById('app-workspace').classList.add('hidden');
+      ['auth-screen', 'reset-request-screen', 'reset-password-screen', 'app-workspace'].forEach(id => {
+        document.getElementById(id).classList.add('hidden');
+      });
       document.getElementById(screenId).classList.remove('hidden');
     }
+
+    async function handleSendResetEmail() {
+      const email = document.getElementById('reset-email').value.trim();
+      const msg = document.getElementById('reset-request-msg');
+      if (!email) return;
+      const { error } = await sbClient.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin });
+      msg.classList.remove('hidden', 'text-red-500', 'text-emerald-600');
+      if (error) { msg.textContent = error.message; msg.classList.add('text-red-500'); }
+      else { msg.textContent = 'Check your email for a reset link.'; msg.classList.add('text-emerald-600'); }
+    }
+
+    async function handleUpdatePassword() {
+      const newPassword = document.getElementById('new-password').value;
+      const msg = document.getElementById('reset-password-msg');
+      if (!newPassword || newPassword.length < 6) {
+        msg.textContent = 'Password must be at least 6 characters.';
+        msg.classList.remove('hidden'); msg.classList.add('text-red-500');
+        return;
+      }
+      const { error } = await sbClient.auth.updateUser({ password: newPassword });
+      msg.classList.remove('hidden', 'text-red-500', 'text-emerald-600');
+      if (error) { msg.textContent = error.message; msg.classList.add('text-red-500'); return; }
+      msg.textContent = 'Password updated! Redirecting…';
+      msg.classList.add('text-emerald-600');
+      setTimeout(async () => {
+        const { data: { session } } = await sbClient.auth.getSession();
+        if (session) { setupUserSession(session.user); } else { showScreen('auth-screen'); }
+      }, 1200);
+    }
+
+    // Supabase fires this when the user lands here via a password-reset email link
+    sbClient.auth.onAuthStateChange((event) => {
+      if (event === 'PASSWORD_RECOVERY') { showScreen('reset-password-screen'); }
+    });
 
     function switchTab(tab) {
       const container = document.getElementById('tab-content');
@@ -183,7 +282,7 @@
         const btn = document.getElementById(`btn-tab-${t}`);
         btn.className = (t === tab)
           ? "py-2.5 px-4 font-bold text-sm border-b-2 brand-border brand-text transition"
-          : "py-2.5 px-4 font-semibold text-sm border-b-2 border-transparent text-slate-400 hover:text-slate-600 transition";
+          : "py-2.5 px-4 font-semibold text-sm border-b-2 border-transparent text-muted hover:text-muted transition";
       });
 
       if (tab === 'visitors') renderVisitorsTab(container);
@@ -209,8 +308,8 @@
 
       container.innerHTML = `
         <div class="space-y-6">
-          <div class="bg-white border border-slate-200 rounded-xl p-6 space-y-3">
-            <h4 class="text-base font-bold text-slate-900"><i class="fa-solid fa-clipboard-user mr-2 text-slate-400"></i>Visitor Check-In</h4>
+          <div class="surface border border-main rounded-xl p-6 space-y-3">
+            <h4 class="text-base font-bold text-main"><i class="fa-solid fa-clipboard-user mr-2 text-muted"></i>Visitor Check-In</h4>
             <form id="checkin-form" class="space-y-3">
               <input type="text" id="checkin-id" placeholder="ID Number" required class="field-input">
               <input type="text" id="checkin-name" placeholder="Full Name" required class="field-input">
@@ -221,7 +320,7 @@
               </select>
               <input type="text" id="checkin-purpose" placeholder="Purpose" required class="field-input">
               ${extraFieldInputs}
-              <label class="flex items-start gap-2 text-xs text-slate-500">
+              <label class="flex items-start gap-2 text-xs text-muted">
                 <input type="checkbox" id="checkin-consent" required class="mt-0.5">
                 I agree that my name, ID number, and phone number will be recorded for front desk and security purposes only.
               </label>
@@ -230,13 +329,13 @@
             </form>
           </div>
 
-          <div class="bg-slate-50 rounded-xl p-6 border border-slate-100 space-y-4">
-            <h4 class="text-base font-bold text-slate-900">Today: <span id="today-visitor-count">0</span> Visitors</h4>
+          <div class="surface-alt rounded-xl p-6 border border-main space-y-4">
+            <h4 class="text-base font-bold text-main">Today: <span id="today-visitor-count">0</span> Visitors</h4>
             <input type="text" id="visitor-search" placeholder="Search today's visitors by name, ID or phone" class="field-input">
-            <div id="visitors-table-wrap" class="bg-white border border-slate-200 rounded-xl overflow-x-auto">
-              <div class="p-6 text-center text-slate-400 text-sm">Loading visitors…</div>
+            <div id="visitors-table-wrap" class="surface border border-main rounded-xl overflow-x-auto">
+              <div class="p-6 text-center text-muted text-sm">Loading visitors…</div>
             </div>
-            <button onclick="window.print()" class="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-sm rounded-xl transition">Print Today's Log</button>
+            <button onclick="window.print()" class="w-full py-2.5 surface-alt hover:brightness-125 text-main font-semibold text-sm rounded-xl transition">Print Today's Log</button>
           </div>
         </div>
       `;
@@ -261,6 +360,20 @@
         extraFields[input.dataset.fieldName] = input.value;
       });
 
+      const { data: alreadyIn } = await sbClient
+        .from('visitors')
+        .select('id')
+        .eq('organization_id', userOrgId)
+        .eq('visitor_id', idNumber)
+        .is('time_out', null)
+        .maybeSingle();
+
+      if (alreadyIn) {
+        errorEl.textContent = `Visitor ID ${idNumber} is already checked in and hasn't been checked out yet.`;
+        errorEl.classList.remove('hidden');
+        return;
+      }
+
       const { error } = await sbClient.from('visitors').insert({
         organization_id: userOrgId, visitor_id: idNumber, name, phone,
         office: office || null, purpose, time: new Date().toISOString(),
@@ -275,7 +388,7 @@
     async function loadVisitorsTable() {
       const wrap = document.getElementById('visitors-table-wrap');
       if (!wrap) return;
-      wrap.innerHTML = `<div class="p-6 text-center text-slate-400 text-sm">Loading visitors…</div>`;
+      wrap.innerHTML = `<div class="p-6 text-center text-muted text-sm">Loading visitors…</div>`;
 
       const { data: visitors, error } = await sbClient
         .from('visitors')
@@ -314,18 +427,18 @@
     function renderVisitorsTable(visitors) {
       const wrap = document.getElementById('visitors-table-wrap');
       if (!wrap) return;
-      if (!visitors || visitors.length === 0) { wrap.innerHTML = `<div class="p-6 text-center text-slate-400 text-sm">No visitors found.</div>`; return; }
+      if (!visitors || visitors.length === 0) { wrap.innerHTML = `<div class="p-6 text-center text-muted text-sm">No visitors found.</div>`; return; }
 
       wrap.innerHTML = `
         <table class="w-full text-sm text-left">
-          <thead class="bg-slate-50 text-slate-500 uppercase text-xs font-bold">
+          <thead class="surface-alt text-muted uppercase text-xs font-bold">
             <tr><th class="px-4 py-3">Name</th><th class="px-4 py-3">ID</th><th class="px-4 py-3">Phone</th><th class="px-4 py-3">Office</th><th class="px-4 py-3">Arrived</th><th class="px-4 py-3">Left</th><th class="px-4 py-3"></th></tr>
           </thead>
           <tbody class="divide-y divide-slate-100">
             ${visitors.map(v => `
               <tr>
-                <td class="px-4 py-3 font-medium text-slate-800">${v.name ?? '—'}</td>
-                <td class="px-4 py-3 font-mono text-xs text-slate-500">${v.visitor_id ?? '—'}</td>
+                <td class="px-4 py-3 font-medium text-main">${v.name ?? '—'}</td>
+                <td class="px-4 py-3 font-mono text-xs text-muted">${v.visitor_id ?? '—'}</td>
                 <td class="px-4 py-3">${v.phone ?? '—'}</td>
                 <td class="px-4 py-3">${v.office ?? '—'}</td>
                 <td class="px-4 py-3">${v.time ? new Date(v.time).toLocaleTimeString() : '—'}</td>
@@ -343,14 +456,14 @@
 
     async function handleVisitorCheckout(id) {
       const { error } = await sbClient.from('visitors').update({ time_out: new Date().toISOString() }).eq('id', id);
-      if (error) { alert('Failed to check out: ' + error.message); return; }
+      if (error) { showToast('Failed to check out: ' + error.message, 'error'); return; }
       await loadVisitorsTable();
     }
 
     async function handleDeleteVisitor(id) {
       if (!confirm('Delete this visitor record? This cannot be undone.')) return;
       const { error } = await sbClient.from('visitors').delete().eq('id', id);
-      if (error) { alert('Failed to delete: ' + error.message); return; }
+      if (error) { showToast('Failed to delete: ' + error.message, 'error'); return; }
       await loadVisitorsTable();
     }
 
@@ -365,33 +478,33 @@
 
       container.innerHTML = `
         <div class="space-y-6">
-          <div class="bg-white border border-slate-200 rounded-xl p-6 space-y-3">
-            <h4 class="text-base font-bold text-slate-900">Staff Sign-In / Out</h4>
+          <div class="surface border border-main rounded-xl p-6 space-y-3">
+            <h4 class="text-base font-bold text-main">Staff Sign-In / Out</h4>
             <select id="staff-select" class="field-input">
               <option value="">Select Staff...</option>
               ${staffOptions}
             </select>
 
             <div class="space-y-2">
-              <video id="camera-preview" class="hidden w-full max-h-64 object-cover rounded-xl border border-slate-200 bg-slate-900"></video>
+              <video id="camera-preview" class="hidden w-full max-h-64 object-cover rounded-xl border border-main bg-slate-900"></video>
               <canvas id="camera-canvas" class="hidden"></canvas>
               <div class="grid grid-cols-2 gap-3">
-                <button type="button" onclick="startCamera()" class="py-2 bg-slate-50 hover:bg-slate-100 text-slate-600 text-sm font-semibold rounded-xl border border-slate-200 transition">
+                <button type="button" onclick="startCamera()" class="py-2 surface-alt hover:surface-alt text-muted text-sm font-semibold rounded-xl border border-main transition">
                   <i class="fa-solid fa-camera mr-1.5"></i>Enable Camera
                 </button>
-                <button type="button" onclick="capturePhoto()" class="py-2 bg-slate-50 hover:bg-slate-100 text-slate-600 text-sm font-semibold rounded-xl border border-slate-200 transition">
+                <button type="button" onclick="capturePhoto()" class="py-2 surface-alt hover:surface-alt text-muted text-sm font-semibold rounded-xl border border-main transition">
                   <i class="fa-solid fa-circle-dot mr-1.5"></i>Capture Photo
                 </button>
               </div>
-              <p id="captured-photo-status" class="text-xs text-slate-400 text-center">No photo captured — required to sign in/out</p>
+              <p id="captured-photo-status" class="text-xs text-muted text-center">No photo captured — required to sign in/out</p>
             </div>
 
             <div class="grid grid-cols-2 gap-3">
               <button onclick="handleStaffSignIn()" class="py-2.5 brand-bg text-white font-semibold rounded-xl transition">Sign In</button>
-              <button onclick="handleStaffSignOut()" class="py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-xl transition">Sign Out</button>
+              <button onclick="handleStaffSignOut()" class="py-2.5 surface-alt hover:brightness-125 text-main font-semibold rounded-xl transition">Sign Out</button>
             </div>
             <p id="staff-action-error" class="text-red-500 text-sm text-center font-medium hidden"></p>
-            <button onclick="toggleAddStaffForm()" class="w-full py-2.5 bg-slate-50 hover:bg-slate-100 text-slate-600 font-semibold text-sm rounded-xl border border-slate-200 transition">+ Add Staff</button>
+            <button onclick="toggleAddStaffForm()" class="w-full py-2.5 surface-alt hover:surface-alt text-muted font-semibold text-sm rounded-xl border border-main transition">+ Add Staff</button>
             <div id="add-staff-form" class="hidden space-y-2 pt-2">
               <input type="text" id="new-staff-id" placeholder="Staff ID" class="field-input">
               <input type="text" id="new-staff-name" placeholder="Full Name" class="field-input">
@@ -399,13 +512,13 @@
               <button onclick="handleAddStaff()" class="btn-primary">Save Staff</button>
             </div>
             <input type="text" id="staff-search" placeholder="Search staff list" class="field-input">
-            <div id="staff-list-wrap" class="text-sm text-slate-400 text-center py-2">Loading…</div>
+            <div id="staff-list-wrap" class="text-sm text-muted text-center py-2">Loading…</div>
           </div>
 
-          <div class="bg-slate-50 rounded-xl p-6 border border-slate-100 space-y-4">
-            <h4 class="text-base font-bold text-slate-900">Today's Attendance</h4>
-            <div id="attendance-table-wrap" class="bg-white border border-slate-200 rounded-xl overflow-x-auto">
-              <div class="p-6 text-center text-slate-400 text-sm">Loading attendance…</div>
+          <div class="surface-alt rounded-xl p-6 border border-main space-y-4">
+            <h4 class="text-base font-bold text-main">Today's Attendance</h4>
+            <div id="attendance-table-wrap" class="surface border border-main rounded-xl overflow-x-auto">
+              <div class="p-6 text-center text-muted text-sm">Loading attendance…</div>
             </div>
           </div>
         </div>
@@ -424,9 +537,9 @@
       const staff_id = document.getElementById('new-staff-id').value.trim();
       const name = document.getElementById('new-staff-name').value.trim();
       const type = document.getElementById('new-staff-type').value.trim();
-      if (!staff_id || !name) { alert('Staff ID and Name are required.'); return; }
+      if (!staff_id || !name) { showToast('Staff ID and Name are required.', 'error'); return; }
       const { error } = await sbClient.from('staff').insert({ organization_id: userOrgId, staff_id, name, type: type || null });
-      if (error) { alert('Failed to add staff: ' + error.message); return; }
+      if (error) { showToast('Failed to add staff: ' + error.message, 'error'); return; }
       document.getElementById('new-staff-id').value = '';
       document.getElementById('new-staff-name').value = '';
       document.getElementById('new-staff-type').value = '';
@@ -443,14 +556,14 @@
     function renderStaffList(list) {
       const wrap = document.getElementById('staff-list-wrap');
       if (!wrap) return;
-      if (!list || list.length === 0) { wrap.innerHTML = `<div class="text-sm text-slate-400 text-center py-2">No staff found</div>`; return; }
+      if (!list || list.length === 0) { wrap.innerHTML = `<div class="text-sm text-muted text-center py-2">No staff found</div>`; return; }
       wrap.innerHTML = `
-        <div class="divide-y divide-slate-100 border border-slate-200 rounded-xl overflow-hidden">
+        <div class="divide-y divide-slate-100 border border-main rounded-xl overflow-hidden">
           ${list.map(s => `
             <div class="flex justify-between items-center px-4 py-2.5 text-sm">
-              <span class="font-medium text-slate-800">${s.name}</span>
+              <span class="font-medium text-main">${s.name}</span>
               <span class="flex items-center gap-3">
-                <span class="text-slate-400 font-mono text-xs">${s.staff_id}</span>
+                <span class="text-muted font-mono text-xs">${s.staff_id}</span>
                 <button onclick="handleDeleteStaff(${s.id})" class="text-red-400 hover:text-red-600 text-xs font-semibold"><i class="fa-solid fa-trash"></i></button>
               </span>
             </div>
@@ -462,14 +575,14 @@
     async function handleDeleteStaff(id) {
       if (!confirm('Delete this staff member? This cannot be undone.')) return;
       const { error } = await sbClient.from('staff').delete().eq('id', id);
-      if (error) { alert('Failed to delete: ' + error.message); return; }
+      if (error) { showToast('Failed to delete: ' + error.message, 'error'); return; }
       await loadStaffCache();
       switchTab('staff');
     }
 
     // ===================== CAMERA CAPTURE =====================
     let cameraStream = null;
-    let capturedPhotoDataUrl = null;
+    let capturedPhotoDataUrl = null; // holds the public Storage URL once uploaded
 
     async function startCamera() {
       const video = document.getElementById('camera-preview');
@@ -479,7 +592,7 @@
         video.classList.remove('hidden');
         await video.play();
       } catch (err) {
-        alert('Could not access camera: ' + err.message);
+        showToast('Could not access camera: ' + err.message, 'error');
       }
     }
 
@@ -487,20 +600,33 @@
       const video = document.getElementById('camera-preview');
       const canvas = document.getElementById('camera-canvas');
       const status = document.getElementById('captured-photo-status');
-      if (!cameraStream) { alert('Tap "Enable Camera" first.'); return; }
+      if (!cameraStream) { showToast('Tap "Enable Camera" first.', 'error'); return; }
 
       canvas.width = video.videoWidth || 320;
       canvas.height = video.videoHeight || 240;
       canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
-      // Compress to keep the stored text column small
-      capturedPhotoDataUrl = canvas.toDataURL('image/jpeg', 0.5);
-
-      status.textContent = 'Photo captured ✓';
-      status.classList.add('text-emerald-600', 'font-semibold');
 
       cameraStream.getTracks().forEach(t => t.stop());
       cameraStream = null;
       video.classList.add('hidden');
+
+      status.textContent = 'Uploading photo…';
+      status.classList.remove('text-emerald-600', 'font-semibold');
+
+      canvas.toBlob(async (blob) => {
+        if (!blob) { status.textContent = 'Capture failed — try again.'; return; }
+        const fileName = `${userOrgId}/${Date.now()}.jpg`;
+        const { error } = await sbClient.storage.from('staff-photos').upload(fileName, blob, { contentType: 'image/jpeg' });
+        if (error) {
+          status.textContent = 'Upload failed: ' + error.message;
+          showToast('Photo upload failed: ' + error.message, 'error');
+          return;
+        }
+        const { data } = sbClient.storage.from('staff-photos').getPublicUrl(fileName);
+        capturedPhotoDataUrl = data.publicUrl;
+        status.textContent = 'Photo captured ✓';
+        status.classList.add('text-emerald-600', 'font-semibold');
+      }, 'image/jpeg', 0.7);
     }
 
     function resetCapturedPhoto() {
@@ -571,21 +697,21 @@
       const { data, error } = await sbClient.from('attendance').select('*').eq('organization_id', userOrgId).eq('date', today).order('time_in', { ascending: false });
 
       if (error) { wrap.innerHTML = `<div class="p-6 text-center text-red-500 text-sm">Error loading attendance: ${error.message}</div>`; return; }
-      if (!data || data.length === 0) { wrap.innerHTML = `<div class="p-6 text-center text-slate-400 text-sm">No attendance recorded yet today.</div>`; return; }
+      if (!data || data.length === 0) { wrap.innerHTML = `<div class="p-6 text-center text-muted text-sm">No attendance recorded yet today.</div>`; return; }
 
       wrap.innerHTML = `
         <table class="w-full text-sm text-left">
-          <thead class="bg-slate-50 text-slate-500 uppercase text-xs font-bold">
+          <thead class="surface-alt text-muted uppercase text-xs font-bold">
             <tr><th class="px-4 py-3">Name</th><th class="px-4 py-3">In</th><th class="px-4 py-3">Photo</th><th class="px-4 py-3">Out</th><th class="px-4 py-3">Photo</th><th class="px-4 py-3"></th></tr>
           </thead>
           <tbody class="divide-y divide-slate-100">
             ${data.map(a => `
               <tr>
-                <td class="px-4 py-3 font-medium text-slate-800">${a.name ?? '—'}</td>
+                <td class="px-4 py-3 font-medium text-main">${a.name ?? '—'}</td>
                 <td class="px-4 py-3">${a.time_in ? new Date(a.time_in).toLocaleTimeString() : '—'}</td>
-                <td class="px-4 py-3">${a.photo_in ? `<img src="${a.photo_in}" class="w-10 h-10 rounded-lg object-cover border border-slate-200">` : '—'}</td>
+                <td class="px-4 py-3">${a.photo_in ? `<img src="${a.photo_in}" class="w-10 h-10 rounded-lg object-cover border border-main">` : '—'}</td>
                 <td class="px-4 py-3">${a.time_out ? new Date(a.time_out).toLocaleTimeString() : '<span class="text-emerald-600 font-semibold">Still in</span>'}</td>
-                <td class="px-4 py-3">${a.photo_out ? `<img src="${a.photo_out}" class="w-10 h-10 rounded-lg object-cover border border-slate-200">` : '—'}</td>
+                <td class="px-4 py-3">${a.photo_out ? `<img src="${a.photo_out}" class="w-10 h-10 rounded-lg object-cover border border-main">` : '—'}</td>
                 <td class="px-4 py-3"><button onclick="handleDeleteAttendance(${a.id})" class="text-red-400 hover:text-red-600 text-xs font-semibold"><i class="fa-solid fa-trash"></i></button></td>
               </tr>
             `).join('')}
@@ -597,7 +723,7 @@
     async function handleDeleteAttendance(id) {
       if (!confirm('Delete this attendance record? This cannot be undone.')) return;
       const { error } = await sbClient.from('attendance').delete().eq('id', id);
-      if (error) { alert('Failed to delete: ' + error.message); return; }
+      if (error) { showToast('Failed to delete: ' + error.message, 'error'); return; }
       await loadTodayAttendance();
     }
 
@@ -609,22 +735,22 @@
       currentEventDetailId = null;
       container.innerHTML = `
         <div class="space-y-6">
-          <div class="bg-white border border-slate-200 rounded-xl p-6 space-y-3">
-            <h4 class="text-base font-bold text-slate-900">Events</h4>
+          <div class="surface border border-main rounded-xl p-6 space-y-3">
+            <h4 class="text-base font-bold text-main">Events</h4>
             <input type="text" id="event-search" placeholder="Search events by title" class="field-input">
             <button onclick="toggleNewEventForm()" class="btn-primary">+ New Event</button>
-            <div id="new-event-form" class="hidden space-y-3 pt-3 border-t border-slate-100">
+            <div id="new-event-form" class="hidden space-y-3 pt-3 border-t border-main">
               <input type="text" id="new-event-title" placeholder="Event title (e.g. Youth Forum - July 2026)" class="field-input">
-              <p class="text-xs text-slate-500">List the details you want to capture, separated by commas (e.g. Name, ID Number, Phone, Organization)</p>
+              <p class="text-xs text-muted">List the details you want to capture, separated by commas (e.g. Name, ID Number, Phone, Organization)</p>
               <input type="text" id="new-event-fields" placeholder="Name, ID Number, Phone" class="field-input">
               <div class="grid grid-cols-2 gap-3">
                 <button onclick="handleCreateEvent()" class="py-2.5 brand-bg text-white font-semibold rounded-xl transition">Create Event</button>
-                <button onclick="toggleNewEventForm()" class="py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-xl transition">Cancel</button>
+                <button onclick="toggleNewEventForm()" class="py-2.5 surface-alt hover:brightness-125 text-main font-semibold rounded-xl transition">Cancel</button>
               </div>
             </div>
           </div>
           <div id="events-list-wrap" class="space-y-3">
-            <div class="text-center text-slate-400 text-sm py-4">Loading events…</div>
+            <div class="text-center text-muted text-sm py-4">Loading events…</div>
           </div>
         </div>
       `;
@@ -639,9 +765,9 @@
     async function handleCreateEvent() {
       const title = document.getElementById('new-event-title').value.trim();
       const fields = document.getElementById('new-event-fields').value.trim();
-      if (!title) { alert('Event title is required.'); return; }
+      if (!title) { showToast('Event title is required.', 'error'); return; }
       const { error } = await sbClient.from('events').insert({ organization_id: userOrgId, title, fields: fields || null, status: 'open' });
-      if (error) { alert('Failed to create event: ' + error.message); return; }
+      if (error) { showToast('Failed to create event: ' + error.message, 'error'); return; }
       document.getElementById('new-event-title').value = '';
       document.getElementById('new-event-fields').value = '';
       document.getElementById('new-event-form').classList.add('hidden');
@@ -665,20 +791,20 @@
     function renderEventsList(events) {
       const wrap = document.getElementById('events-list-wrap');
       if (!wrap) return;
-      if (!events || events.length === 0) { wrap.innerHTML = `<div class="text-center text-slate-400 text-sm py-4">No events yet. Tap "+ New Event" to create one.</div>`; return; }
+      if (!events || events.length === 0) { wrap.innerHTML = `<div class="text-center text-muted text-sm py-4">No events yet. Tap "+ New Event" to create one.</div>`; return; }
 
       wrap.innerHTML = `
-        <div class="bg-white border border-slate-200 rounded-xl overflow-x-auto">
+        <div class="surface border border-main rounded-xl overflow-x-auto">
           <table class="w-full text-sm text-left">
-            <thead class="bg-slate-50 text-slate-500 uppercase text-xs font-bold">
+            <thead class="surface-alt text-muted uppercase text-xs font-bold">
               <tr><th class="px-4 py-3">Title</th><th class="px-4 py-3">Status</th><th class="px-4 py-3">Created</th><th class="px-4 py-3"></th></tr>
             </thead>
             <tbody class="divide-y divide-slate-100">
               ${events.map(ev => `
-                <tr class="cursor-pointer hover:bg-slate-50" onclick="openEventDetail(${ev.id})">
-                  <td class="px-4 py-3 font-medium text-slate-800">${ev.title}</td>
-                  <td class="px-4 py-3">${ev.status === 'closed' ? '<span class="text-slate-400">Closed</span>' : '<span class="text-emerald-600 font-semibold">Open</span>'}</td>
-                  <td class="px-4 py-3 text-slate-500 text-xs">${ev.created_at ? new Date(ev.created_at).toLocaleDateString() : '—'}</td>
+                <tr class="cursor-pointer hover:surface-alt" onclick="openEventDetail(${ev.id})">
+                  <td class="px-4 py-3 font-medium text-main">${ev.title}</td>
+                  <td class="px-4 py-3">${ev.status === 'closed' ? '<span class="text-muted">Closed</span>' : '<span class="text-emerald-600 font-semibold">Open</span>'}</td>
+                  <td class="px-4 py-3 text-muted text-xs">${ev.created_at ? new Date(ev.created_at).toLocaleDateString() : '—'}</td>
                   <td class="px-4 py-3 text-right" onclick="event.stopPropagation()">
                     <button onclick="handleDeleteEvent(${ev.id})" class="text-red-400 hover:text-red-600 text-xs font-semibold"><i class="fa-solid fa-trash"></i></button>
                   </td>
@@ -694,7 +820,7 @@
       if (!confirm('Delete this event and all its entries? This cannot be undone.')) return;
       await sbClient.from('event_checkins').delete().eq('event_id', id);
       const { error } = await sbClient.from('events').delete().eq('id', id);
-      if (error) { alert('Failed to delete: ' + error.message); return; }
+      if (error) { showToast('Failed to delete: ' + error.message, 'error'); return; }
       await loadEvents();
     }
 
@@ -708,17 +834,17 @@
       const fieldNames = (ev.fields || '').split(',').map(f => f.trim()).filter(Boolean);
       const fieldInputs = fieldNames.length > 0
         ? fieldNames.map((f, i) => `<input type="text" id="entry-field-${i}" data-field-name="${f}" placeholder="${f.toUpperCase()}" class="field-input">`).join('')
-        : '<p class="text-xs text-slate-400">No custom fields defined for this event.</p>';
+        : '<p class="text-xs text-muted">No custom fields defined for this event.</p>';
 
       container.innerHTML = `
         <div class="space-y-4 max-w-2xl">
-          <button onclick="switchTab('events')" class="w-full py-2.5 bg-slate-50 hover:bg-slate-100 text-slate-600 font-semibold text-sm rounded-xl border border-slate-200 transition">
+          <button onclick="switchTab('events')" class="w-full py-2.5 surface-alt hover:surface-alt text-muted font-semibold text-sm rounded-xl border border-main transition">
             <i class="fa-solid fa-arrow-left mr-1.5"></i> Back to Events
           </button>
 
           <div>
-            <h4 class="text-xl font-bold text-slate-900">${ev.title}</h4>
-            <p class="text-xs text-slate-400 mt-1">Status: ${ev.status || 'open'} &middot; Created ${ev.created_at ? new Date(ev.created_at).toLocaleDateString() : '—'}</p>
+            <h4 class="text-xl font-bold text-main">${ev.title}</h4>
+            <p class="text-xs text-muted mt-1">Status: ${ev.status || 'open'} &middot; Created ${ev.created_at ? new Date(ev.created_at).toLocaleDateString() : '—'}</p>
           </div>
 
           <div class="space-y-2">
@@ -728,14 +854,14 @@
           <p id="entry-error" class="text-red-500 text-sm text-center font-medium hidden"></p>
 
           <div class="grid grid-cols-2 gap-3">
-            <button onclick="handleExportEventExcel(${ev.id})" class="py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-sm rounded-xl transition">Export Excel</button>
+            <button onclick="handleExportEventExcel(${ev.id})" class="py-2.5 surface-alt hover:brightness-125 text-main font-semibold text-sm rounded-xl transition">Export Excel</button>
             <button onclick="handleToggleEventStatus(${ev.id})" class="py-2.5 bg-red-50 hover:bg-red-100 text-red-600 font-semibold text-sm rounded-xl transition">${ev.status === 'closed' ? 'Reopen Event' : 'Close Event'}</button>
           </div>
           <button onclick="handleDeleteEvent(${ev.id})" class="w-full py-2.5 bg-red-500 hover:bg-red-600 text-white font-semibold text-sm rounded-xl transition">Delete Event</button>
 
-          <h5 class="font-bold text-slate-900 pt-2">Entries (<span id="entry-count">0</span>)</h5>
-          <div id="event-entries-wrap" class="bg-white border border-slate-200 rounded-xl overflow-x-auto">
-            <div class="p-6 text-center text-slate-400 text-sm">Loading entries…</div>
+          <h5 class="font-bold text-main pt-2">Entries (<span id="entry-count">0</span>)</h5>
+          <div id="event-entries-wrap" class="surface border border-main rounded-xl overflow-x-auto">
+            <div class="p-6 text-center text-muted text-sm">Loading entries…</div>
           </div>
         </div>
       `;
@@ -753,7 +879,7 @@
       if (countEl) countEl.textContent = currentEventEntries.length;
 
       const fieldNames = (ev.fields || '').split(',').map(f => f.trim()).filter(Boolean);
-      if (currentEventEntries.length === 0) { wrap.innerHTML = `<div class="p-6 text-center text-slate-400 text-sm">No entries yet.</div>`; return; }
+      if (currentEventEntries.length === 0) { wrap.innerHTML = `<div class="p-6 text-center text-muted text-sm">No entries yet.</div>`; return; }
 
       wrap.innerHTML = `
         <table class="w-full text-sm text-left">
@@ -789,7 +915,7 @@
     async function handleDeleteEventEntry(entryId, eventId) {
       if (!confirm('Delete this entry?')) return;
       const { error } = await sbClient.from('event_checkins').delete().eq('id', entryId);
-      if (error) { alert('Failed to delete: ' + error.message); return; }
+      if (error) { showToast('Failed to delete: ' + error.message, 'error'); return; }
       const ev = eventsCache.find(e => e.id === eventId);
       loadEventEntries(ev);
     }
@@ -798,14 +924,14 @@
       const ev = eventsCache.find(e => e.id === eventId);
       const newStatus = ev.status === 'closed' ? 'open' : 'closed';
       const { error } = await sbClient.from('events').update({ status: newStatus }).eq('id', eventId);
-      if (error) { alert('Failed to update status: ' + error.message); return; }
+      if (error) { showToast('Failed to update status: ' + error.message, 'error'); return; }
       await loadEvents();
       openEventDetail(eventId);
     }
 
     function handleExportEventExcel(eventId) {
       const ev = eventsCache.find(e => e.id === eventId);
-      if (!currentEventEntries || currentEventEntries.length === 0) { alert('No entries to export yet.'); return; }
+      if (!currentEventEntries || currentEventEntries.length === 0) { showToast('No entries to export yet.', 'error'); return; }
       const fieldNames = (ev.fields || '').split(',').map(f => f.trim()).filter(Boolean);
       const rows = currentEventEntries.map(entry => {
         const row = {};
@@ -822,22 +948,22 @@
     function renderHistoryTab(container) {
       container.innerHTML = `
         <div class="space-y-6">
-          <div class="bg-white border border-slate-200 rounded-xl p-6 space-y-3">
-            <h4 class="text-base font-bold text-slate-900">History Search</h4>
-            <p class="text-sm text-slate-500">Search visitor and staff records for any past date.</p>
+          <div class="surface border border-main rounded-xl p-6 space-y-3">
+            <h4 class="text-base font-bold text-main">History Search</h4>
+            <p class="text-sm text-muted">Search visitor and staff records for any past date.</p>
             <input type="date" id="history-date" class="field-input">
             <button onclick="handleHistorySearch()" class="btn-primary">Search</button>
           </div>
           <div>
-            <h5 class="font-bold text-slate-900 mb-2">Visitors that day</h5>
-            <div id="history-visitors-wrap" class="bg-white border border-slate-200 rounded-xl overflow-x-auto">
-              <div class="p-6 text-center text-slate-400 text-sm">Pick a date and search.</div>
+            <h5 class="font-bold text-main mb-2">Visitors that day</h5>
+            <div id="history-visitors-wrap" class="surface border border-main rounded-xl overflow-x-auto">
+              <div class="p-6 text-center text-muted text-sm">Pick a date and search.</div>
             </div>
           </div>
           <div>
-            <h5 class="font-bold text-slate-900 mb-2">Staff attendance that day</h5>
-            <div id="history-attendance-wrap" class="bg-white border border-slate-200 rounded-xl overflow-x-auto">
-              <div class="p-6 text-center text-slate-400 text-sm">Pick a date and search.</div>
+            <h5 class="font-bold text-main mb-2">Staff attendance that day</h5>
+            <div id="history-attendance-wrap" class="surface border border-main rounded-xl overflow-x-auto">
+              <div class="p-6 text-center text-muted text-sm">Pick a date and search.</div>
             </div>
           </div>
         </div>
@@ -848,7 +974,7 @@
       const date = document.getElementById('history-date').value;
       const vWrap = document.getElementById('history-visitors-wrap');
       const aWrap = document.getElementById('history-attendance-wrap');
-      if (!date) { alert('Pick a date first.'); return; }
+      if (!date) { showToast('Pick a date first.', 'error'); return; }
 
       const dayStart = `${date}T00:00:00`;
       const dayEnd = `${date}T23:59:59`;
@@ -856,17 +982,17 @@
       const { data: visitors, error: vErr } = await sbClient.from('visitors').select('*')
         .eq('organization_id', userOrgId).gte('time', dayStart).lte('time', dayEnd).order('time');
       if (vErr) { vWrap.innerHTML = `<div class="p-6 text-center text-red-500 text-sm">${vErr.message}</div>`; }
-      else if (!visitors || visitors.length === 0) { vWrap.innerHTML = `<div class="p-6 text-center text-slate-400 text-sm">No visitors that day.</div>`; }
+      else if (!visitors || visitors.length === 0) { vWrap.innerHTML = `<div class="p-6 text-center text-muted text-sm">No visitors that day.</div>`; }
       else {
-        vWrap.innerHTML = `<table class="w-full text-sm text-left"><thead class="bg-slate-50 text-slate-500 uppercase text-xs font-bold"><tr><th class="px-4 py-3">Name</th><th class="px-4 py-3">ID</th><th class="px-4 py-3">Time</th></tr></thead><tbody class="divide-y divide-slate-100">${visitors.map(v => `<tr><td class="px-4 py-3">${v.name ?? '—'}</td><td class="px-4 py-3 font-mono text-xs">${v.visitor_id ?? '—'}</td><td class="px-4 py-3">${v.time ? new Date(v.time).toLocaleTimeString() : '—'}</td></tr>`).join('')}</tbody></table>`;
+        vWrap.innerHTML = `<table class="w-full text-sm text-left"><thead class="surface-alt text-muted uppercase text-xs font-bold"><tr><th class="px-4 py-3">Name</th><th class="px-4 py-3">ID</th><th class="px-4 py-3">Time</th></tr></thead><tbody class="divide-y divide-slate-100">${visitors.map(v => `<tr><td class="px-4 py-3">${v.name ?? '—'}</td><td class="px-4 py-3 font-mono text-xs">${v.visitor_id ?? '—'}</td><td class="px-4 py-3">${v.time ? new Date(v.time).toLocaleTimeString() : '—'}</td></tr>`).join('')}</tbody></table>`;
       }
 
       const { data: attendance, error: aErr } = await sbClient.from('attendance').select('*')
         .eq('organization_id', userOrgId).eq('date', date).order('time_in');
       if (aErr) { aWrap.innerHTML = `<div class="p-6 text-center text-red-500 text-sm">${aErr.message}</div>`; }
-      else if (!attendance || attendance.length === 0) { aWrap.innerHTML = `<div class="p-6 text-center text-slate-400 text-sm">No staff attendance that day.</div>`; }
+      else if (!attendance || attendance.length === 0) { aWrap.innerHTML = `<div class="p-6 text-center text-muted text-sm">No staff attendance that day.</div>`; }
       else {
-        aWrap.innerHTML = `<table class="w-full text-sm text-left"><thead class="bg-slate-50 text-slate-500 uppercase text-xs font-bold"><tr><th class="px-4 py-3">Name</th><th class="px-4 py-3">In</th><th class="px-4 py-3">Out</th></tr></thead><tbody class="divide-y divide-slate-100">${attendance.map(a => `<tr><td class="px-4 py-3">${a.name ?? '—'}</td><td class="px-4 py-3">${a.time_in ? new Date(a.time_in).toLocaleTimeString() : '—'}</td><td class="px-4 py-3">${a.time_out ? new Date(a.time_out).toLocaleTimeString() : '—'}</td></tr>`).join('')}</tbody></table>`;
+        aWrap.innerHTML = `<table class="w-full text-sm text-left"><thead class="surface-alt text-muted uppercase text-xs font-bold"><tr><th class="px-4 py-3">Name</th><th class="px-4 py-3">In</th><th class="px-4 py-3">Out</th></tr></thead><tbody class="divide-y divide-slate-100">${attendance.map(a => `<tr><td class="px-4 py-3">${a.name ?? '—'}</td><td class="px-4 py-3">${a.time_in ? new Date(a.time_in).toLocaleTimeString() : '—'}</td><td class="px-4 py-3">${a.time_out ? new Date(a.time_out).toLocaleTimeString() : '—'}</td></tr>`).join('')}</tbody></table>`;
       }
     }
 
@@ -877,7 +1003,7 @@
       const staffOptions = staffListCache.map(s => `<option value="${s.staff_id}">${s.name}</option>`).join('');
       container.innerHTML = `
         <div class="space-y-4 max-w-xl">
-          <h4 class="text-base font-bold text-slate-900">Staff Appraisal</h4>
+          <h4 class="text-base font-bold text-main">Staff Appraisal</h4>
           <div class="grid grid-cols-2 gap-3">
             <input type="date" id="appraisal-start" class="field-input">
             <input type="date" id="appraisal-end" class="field-input">
@@ -887,11 +1013,11 @@
             ${staffOptions}
           </select>
           <div>
-            <label class="text-xs font-bold text-slate-500 uppercase tracking-wider">Workday starts at</label>
+            <label class="text-xs font-bold text-muted uppercase tracking-wider">Workday starts at</label>
             <input type="time" id="appraisal-workday-start" value="08:00" class="field-input">
           </div>
           <button onclick="handleGenerateAppraisal()" class="btn-primary">Generate</button>
-          <button onclick="handleExportAppraisal()" class="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-sm rounded-xl transition">Export Excel</button>
+          <button onclick="handleExportAppraisal()" class="w-full py-2.5 surface-alt hover:brightness-125 text-main font-semibold text-sm rounded-xl transition">Export Excel</button>
           <div id="appraisal-results-wrap" class="pt-2"></div>
         </div>
       `;
@@ -904,7 +1030,7 @@
       const workdayStart = document.getElementById('appraisal-workday-start').value;
       const wrap = document.getElementById('appraisal-results-wrap');
 
-      if (!start || !end) { alert('Pick a start and end date.'); return; }
+      if (!start || !end) { showToast('Pick a start and end date.', 'error'); return; }
 
       let query = sbClient.from('attendance').select('*').eq('organization_id', userOrgId).gte('date', start).lte('date', end);
       if (staffFilter) query = query.eq('staff_id', staffFilter);
@@ -927,11 +1053,11 @@
 
       lastAppraisalRows = Object.values(byStaff);
 
-      if (lastAppraisalRows.length === 0) { wrap.innerHTML = `<div class="p-4 text-slate-400 text-sm text-center">No attendance records in this range.</div>`; return; }
+      if (lastAppraisalRows.length === 0) { wrap.innerHTML = `<div class="p-4 text-muted text-sm text-center">No attendance records in this range.</div>`; return; }
 
       wrap.innerHTML = `
-        <table class="w-full text-sm text-left border border-slate-200 rounded-xl overflow-hidden">
-          <thead class="bg-slate-50 text-slate-500 uppercase text-xs font-bold">
+        <table class="w-full text-sm text-left border border-main rounded-xl overflow-hidden">
+          <thead class="surface-alt text-muted uppercase text-xs font-bold">
             <tr><th class="px-4 py-3">Name</th><th class="px-4 py-3">Days Present</th><th class="px-4 py-3">Late Days</th></tr>
           </thead>
           <tbody class="divide-y divide-slate-100">
@@ -942,7 +1068,7 @@
     }
 
     function handleExportAppraisal() {
-      if (!lastAppraisalRows || lastAppraisalRows.length === 0) { alert('Generate a report first.'); return; }
+      if (!lastAppraisalRows || lastAppraisalRows.length === 0) { showToast('Generate a report first.', 'error'); return; }
       const ws = XLSX.utils.json_to_sheet(lastAppraisalRows.map(r => ({ Name: r.name, 'Staff ID': r.staff_id, 'Days Present': r.totalDays, 'Late Days': r.lateDays })));
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, 'Appraisal');
@@ -952,14 +1078,14 @@
     // ===================== SETTINGS TAB =====================
     function renderSettingsTab(container) {
       const officeItems = officesList.map(o => `
-        <div class="flex justify-between items-center px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm">
+        <div class="flex justify-between items-center px-3 py-2 surface border border-main rounded-lg text-sm">
           <span>${o.name}</span>
           <button onclick="handleRemoveOffice(${o.id})" class="text-red-400 hover:text-red-600 text-xs font-semibold">Remove</button>
         </div>
       `).join('');
 
       const fieldItems = (orgSettings.extra_visitor_fields || []).map((f, i) => `
-        <div class="flex justify-between items-center px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm">
+        <div class="flex justify-between items-center px-3 py-2 surface border border-main rounded-lg text-sm">
           <span>${f}</span>
           <button onclick="handleRemoveExtraField(${i})" class="text-red-400 hover:text-red-600 text-xs font-semibold">Remove</button>
         </div>
@@ -968,24 +1094,24 @@
       container.innerHTML = `
         <div class="max-w-xl space-y-8">
           <div class="space-y-3">
-            <h4 class="text-base font-bold text-slate-900">Organization Branding</h4>
+            <h4 class="text-base font-bold text-main">Organization Branding</h4>
             <input type="text" id="setting-name" value="${orgSettings.org_name || ''}" placeholder="Organization Name" class="field-input">
             <input type="text" id="setting-tagline" value="${orgSettings.tagline || ''}" placeholder="Tagline" class="field-input">
             <div>
-              <label class="text-xs font-bold text-slate-500 uppercase tracking-wider">Primary Color</label>
-              <input type="color" id="setting-color" value="${orgSettings.primary_color || '#2563eb'}" class="w-full h-12 border border-slate-200 rounded-xl">
+              <label class="text-xs font-bold text-muted uppercase tracking-wider">Primary Color</label>
+              <input type="color" id="setting-color" value="${orgSettings.primary_color || '#2563eb'}" class="w-full h-12 border border-main rounded-xl">
             </div>
             <input type="text" id="setting-logo" value="${orgSettings.logo_url || ''}" placeholder="Logo image URL (optional)" class="field-input">
           </div>
 
           <div class="space-y-3">
-            <h4 class="text-base font-bold text-slate-900">Staff Attendance Rules</h4>
+            <h4 class="text-base font-bold text-main">Staff Attendance Rules</h4>
             <div>
-              <label class="text-xs text-slate-500">Sign-in is late after:</label>
+              <label class="text-xs text-muted">Sign-in is late after:</label>
               <input type="time" id="setting-late-after" value="${orgSettings.late_after || '08:05'}" class="field-input">
             </div>
             <div>
-              <label class="text-xs text-slate-500">Earliest allowed sign-out:</label>
+              <label class="text-xs text-muted">Earliest allowed sign-out:</label>
               <input type="time" id="setting-earliest-signout" value="${orgSettings.earliest_signout || '17:00'}" class="field-input">
             </div>
           </div>
@@ -993,24 +1119,24 @@
           <button onclick="handleSaveSettings()" class="btn-primary">Save Branding & Rules</button>
           <p id="settings-save-msg" class="text-emerald-600 text-sm text-center font-medium hidden">Saved!</p>
 
-          <div class="space-y-3 pt-4 border-t border-slate-100">
-            <h4 class="text-base font-bold text-slate-900">Departments</h4>
+          <div class="space-y-3 pt-4 border-t border-main">
+            <h4 class="text-base font-bold text-main">Departments</h4>
             <input type="text" id="new-department" placeholder="Add Department" class="field-input">
             <button onclick="handleAddDepartment()" class="btn-primary">Add Department</button>
-            <div class="space-y-2">${officeItems || '<p class="text-xs text-slate-400 text-center">No departments added — this is optional, skip it if not needed.</p>'}</div>
+            <div class="space-y-2">${officeItems || '<p class="text-xs text-muted text-center">No departments added — this is optional, skip it if not needed.</p>'}</div>
           </div>
 
-          <div class="space-y-3 pt-4 border-t border-slate-100">
-            <h4 class="text-base font-bold text-slate-900">Extra Visitor Fields</h4>
-            <p class="text-xs text-slate-500">By default visitors give ID, Name, Phone, Office and Purpose. Add any extra detail your organization needs (e.g. Vehicle Number, Company).</p>
+          <div class="space-y-3 pt-4 border-t border-main">
+            <h4 class="text-base font-bold text-main">Extra Visitor Fields</h4>
+            <p class="text-xs text-muted">By default visitors give ID, Name, Phone, Office and Purpose. Add any extra detail your organization needs (e.g. Vehicle Number, Company).</p>
             <input type="text" id="new-extra-field" placeholder="e.g. Vehicle Number" class="field-input">
             <button onclick="handleAddExtraField()" class="btn-primary">Add Field</button>
-            <div class="space-y-2">${fieldItems || '<p class="text-xs text-slate-400 text-center">No extra fields added.</p>'}</div>
+            <div class="space-y-2">${fieldItems || '<p class="text-xs text-muted text-center">No extra fields added.</p>'}</div>
           </div>
 
-          <div class="space-y-3 pt-4 border-t border-slate-100">
-            <h4 class="text-base font-bold text-slate-900">Data</h4>
-            <button onclick="handleDownloadBackup()" class="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-sm rounded-xl transition">Download Backup (JSON)</button>
+          <div class="space-y-3 pt-4 border-t border-main">
+            <h4 class="text-base font-bold text-main">Data</h4>
+            <button onclick="handleDownloadBackup()" class="w-full py-2.5 surface-alt hover:brightness-125 text-main font-semibold text-sm rounded-xl transition">Download Backup (JSON)</button>
           </div>
         </div>
       `;
@@ -1029,7 +1155,7 @@
         late_after: lateAfter, earliest_signout: earliestSignout
       }).eq('organization_id', userOrgId);
 
-      if (error) { alert('Save failed: ' + error.message); return; }
+      if (error) { showToast('Save failed: ' + error.message, 'error'); return; }
       await loadOrganizationSettings();
       const msg = document.getElementById('settings-save-msg');
       msg.classList.remove('hidden');
@@ -1041,7 +1167,7 @@
       const name = input.value.trim();
       if (!name) return;
       const { error } = await sbClient.from('offices').insert({ organization_id: userOrgId, name });
-      if (error) { alert('Failed to add department: ' + error.message); return; }
+      if (error) { showToast('Failed to add department: ' + error.message, 'error'); return; }
       input.value = '';
       await loadOffices();
       switchTab('settings');
@@ -1049,7 +1175,7 @@
 
     async function handleRemoveOffice(id) {
       const { error } = await sbClient.from('offices').delete().eq('id', id);
-      if (error) { alert('Failed to remove: ' + error.message); return; }
+      if (error) { showToast('Failed to remove: ' + error.message, 'error'); return; }
       await loadOffices();
       switchTab('settings');
     }
@@ -1060,7 +1186,7 @@
       if (!name) return;
       const updated = [...(orgSettings.extra_visitor_fields || []), name];
       const { error } = await sbClient.from('org_settings').update({ extra_visitor_fields: updated }).eq('organization_id', userOrgId);
-      if (error) { alert('Failed to add field: ' + error.message); return; }
+      if (error) { showToast('Failed to add field: ' + error.message, 'error'); return; }
       input.value = '';
       await loadOrganizationSettings();
       switchTab('settings');
@@ -1069,7 +1195,7 @@
     async function handleRemoveExtraField(index) {
       const updated = (orgSettings.extra_visitor_fields || []).filter((_, i) => i !== index);
       const { error } = await sbClient.from('org_settings').update({ extra_visitor_fields: updated }).eq('organization_id', userOrgId);
-      if (error) { alert('Failed to remove field: ' + error.message); return; }
+      if (error) { showToast('Failed to remove field: ' + error.message, 'error'); return; }
       await loadOrganizationSettings();
       switchTab('settings');
     }
