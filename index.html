@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -23,14 +22,14 @@
 </head>
 <body class="min-h-screen flex flex-col justify-between text-slate-800">
 
-  <header class="bg-white border-b border-slate-200 py-4 px-6 shadow-sm">
+  <header id="app-header" class="brand-bg border-b border-slate-200 py-4 px-6 shadow-sm transition-colors">
     <div class="max-w-7xl mx-auto flex items-center justify-between">
       <div>
-        <h1 id="header-org-name" class="text-2xl font-bold text-slate-900 tracking-tight">Smart Reception</h1>
-        <p id="header-tagline" class="text-sm text-slate-500 font-medium">Visitor & Staff Management System</p>
+        <h1 id="header-org-name" class="text-2xl font-bold text-white tracking-tight">Smart Reception</h1>
+        <p id="header-tagline" class="text-sm text-white/80 font-medium">Visitor & Staff Management System</p>
       </div>
-      <div id="logo-container" class="w-28 h-12 flex items-center justify-center border border-dashed border-slate-300 rounded-lg bg-slate-50 overflow-hidden">
-        <span id="logo-placeholder" class="text-xs text-slate-400 font-bold uppercase tracking-wider">Logo</span>
+      <div id="logo-container" class="w-28 h-12 flex items-center justify-center border border-dashed border-white/40 rounded-lg bg-white/10 overflow-hidden">
+        <span id="logo-placeholder" class="text-xs text-white/70 font-bold uppercase tracking-wider">Logo</span>
         <img id="logo-image" class="hidden h-full w-full object-contain p-1" alt="Client Logo">
       </div>
     </div>
@@ -60,7 +59,7 @@
             </button>
           </div>
         </div>
-        <button type="submit" class="w-full py-3 bg-slate-900 hover:bg-slate-800 text-white font-semibold rounded-xl shadow-md transition">Sign In</button>
+        <button type="submit" class="w-full py-3 brand-bg text-white font-semibold rounded-xl shadow-md transition">Sign In</button>
       </form>
       <p id="login-error" class="text-red-500 text-sm mt-3 text-center font-medium hidden"></p>
     </div>
@@ -183,7 +182,7 @@
       tabs.forEach(t => {
         const btn = document.getElementById(`btn-tab-${t}`);
         btn.className = (t === tab)
-          ? "py-2.5 px-4 font-bold text-sm border-b-2 border-slate-900 text-slate-900 transition"
+          ? "py-2.5 px-4 font-bold text-sm border-b-2 brand-border brand-text transition"
           : "py-2.5 px-4 font-semibold text-sm border-b-2 border-transparent text-slate-400 hover:text-slate-600 transition";
       });
 
@@ -331,12 +330,21 @@
                 <td class="px-4 py-3">${v.office ?? '—'}</td>
                 <td class="px-4 py-3">${v.time ? new Date(v.time).toLocaleTimeString() : '—'}</td>
                 <td class="px-4 py-3">${v.time_out ? new Date(v.time_out).toLocaleTimeString() : '<span class="text-emerald-600 font-semibold">Still in</span>'}</td>
-                <td class="px-4 py-3"><button onclick="handleDeleteVisitor(${v.id})" class="text-red-400 hover:text-red-600 text-xs font-semibold"><i class="fa-solid fa-trash"></i></button></td>
+                <td class="px-4 py-3 whitespace-nowrap">
+                  ${!v.time_out ? `<button onclick="handleVisitorCheckout(${v.id})" class="text-xs font-semibold py-1 px-2.5 brand-bg text-white rounded-lg mr-2">Check Out</button>` : ''}
+                  <button onclick="handleDeleteVisitor(${v.id})" class="text-red-400 hover:text-red-600 text-xs font-semibold"><i class="fa-solid fa-trash"></i></button>
+                </td>
               </tr>
             `).join('')}
           </tbody>
         </table>
       `;
+    }
+
+    async function handleVisitorCheckout(id) {
+      const { error } = await sbClient.from('visitors').update({ time_out: new Date().toISOString() }).eq('id', id);
+      if (error) { alert('Failed to check out: ' + error.message); return; }
+      await loadVisitorsTable();
     }
 
     async function handleDeleteVisitor(id) {
@@ -363,8 +371,23 @@
               <option value="">Select Staff...</option>
               ${staffOptions}
             </select>
+
+            <div class="space-y-2">
+              <video id="camera-preview" class="hidden w-full max-h-64 object-cover rounded-xl border border-slate-200 bg-slate-900"></video>
+              <canvas id="camera-canvas" class="hidden"></canvas>
+              <div class="grid grid-cols-2 gap-3">
+                <button type="button" onclick="startCamera()" class="py-2 bg-slate-50 hover:bg-slate-100 text-slate-600 text-sm font-semibold rounded-xl border border-slate-200 transition">
+                  <i class="fa-solid fa-camera mr-1.5"></i>Enable Camera
+                </button>
+                <button type="button" onclick="capturePhoto()" class="py-2 bg-slate-50 hover:bg-slate-100 text-slate-600 text-sm font-semibold rounded-xl border border-slate-200 transition">
+                  <i class="fa-solid fa-circle-dot mr-1.5"></i>Capture Photo
+                </button>
+              </div>
+              <p id="captured-photo-status" class="text-xs text-slate-400 text-center">No photo captured — required to sign in/out</p>
+            </div>
+
             <div class="grid grid-cols-2 gap-3">
-              <button onclick="handleStaffSignIn()" class="py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-semibold rounded-xl transition">Sign In</button>
+              <button onclick="handleStaffSignIn()" class="py-2.5 brand-bg text-white font-semibold rounded-xl transition">Sign In</button>
               <button onclick="handleStaffSignOut()" class="py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-xl transition">Sign Out</button>
             </div>
             <p id="staff-action-error" class="text-red-500 text-sm text-center font-medium hidden"></p>
@@ -444,6 +467,48 @@
       switchTab('staff');
     }
 
+    // ===================== CAMERA CAPTURE =====================
+    let cameraStream = null;
+    let capturedPhotoDataUrl = null;
+
+    async function startCamera() {
+      const video = document.getElementById('camera-preview');
+      try {
+        cameraStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
+        video.srcObject = cameraStream;
+        video.classList.remove('hidden');
+        await video.play();
+      } catch (err) {
+        alert('Could not access camera: ' + err.message);
+      }
+    }
+
+    function capturePhoto() {
+      const video = document.getElementById('camera-preview');
+      const canvas = document.getElementById('camera-canvas');
+      const status = document.getElementById('captured-photo-status');
+      if (!cameraStream) { alert('Tap "Enable Camera" first.'); return; }
+
+      canvas.width = video.videoWidth || 320;
+      canvas.height = video.videoHeight || 240;
+      canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
+      // Compress to keep the stored text column small
+      capturedPhotoDataUrl = canvas.toDataURL('image/jpeg', 0.5);
+
+      status.textContent = 'Photo captured ✓';
+      status.classList.add('text-emerald-600', 'font-semibold');
+
+      cameraStream.getTracks().forEach(t => t.stop());
+      cameraStream = null;
+      video.classList.add('hidden');
+    }
+
+    function resetCapturedPhoto() {
+      capturedPhotoDataUrl = null;
+      const status = document.getElementById('captured-photo-status');
+      if (status) { status.textContent = 'No photo captured — required to sign in/out'; status.classList.remove('text-emerald-600', 'font-semibold'); }
+    }
+
     async function handleStaffSignIn() {
       const select = document.getElementById('staff-select');
       const errorEl = document.getElementById('staff-action-error');
@@ -451,15 +516,18 @@
       const staffId = select.value;
       const staffName = select.selectedOptions[0]?.dataset.name;
       if (!staffId) { errorEl.textContent = 'Select a staff member first.'; errorEl.classList.remove('hidden'); return; }
+      if (!capturedPhotoDataUrl) { errorEl.textContent = 'A photo is required. Tap "Enable Camera" then "Capture Photo" before signing in.'; errorEl.classList.remove('hidden'); return; }
 
       const today = new Date().toISOString().slice(0, 10);
       const { data: existing } = await sbClient.from('attendance').select('id').eq('organization_id', userOrgId).eq('staff_id', staffId).eq('date', today).maybeSingle();
       if (existing) { errorEl.textContent = 'Already signed in today.'; errorEl.classList.remove('hidden'); return; }
 
       const { error } = await sbClient.from('attendance').insert({
-        organization_id: userOrgId, staff_id: staffId, name: staffName, time_in: new Date().toISOString(), date: today
+        organization_id: userOrgId, staff_id: staffId, name: staffName, time_in: new Date().toISOString(), date: today,
+        photo_in: capturedPhotoDataUrl
       });
       if (error) { errorEl.textContent = 'Sign-in failed: ' + error.message; errorEl.classList.remove('hidden'); return; }
+      resetCapturedPhoto();
       loadTodayAttendance();
     }
 
@@ -469,13 +537,30 @@
       errorEl.classList.add('hidden');
       const staffId = select.value;
       if (!staffId) { errorEl.textContent = 'Select a staff member first.'; errorEl.classList.remove('hidden'); return; }
+      if (!capturedPhotoDataUrl) { errorEl.textContent = 'A photo is required. Tap "Enable Camera" then "Capture Photo" before signing out.'; errorEl.classList.remove('hidden'); return; }
+
+      // Enforce earliest allowed sign-out time from org settings
+      const earliest = orgSettings.earliest_signout; // e.g. "17:00:00" or "17:00"
+      if (earliest) {
+        const [eh, em] = earliest.split(':').map(Number);
+        const now = new Date();
+        const nowMinutes = now.getHours() * 60 + now.getMinutes();
+        const earliestMinutes = eh * 60 + em;
+        if (nowMinutes < earliestMinutes) {
+          const label = new Date(0, 0, 0, eh, em).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+          errorEl.textContent = `Sign-out isn't allowed before ${label}.`;
+          errorEl.classList.remove('hidden');
+          return;
+        }
+      }
 
       const today = new Date().toISOString().slice(0, 10);
       const { data: existing } = await sbClient.from('attendance').select('id').eq('organization_id', userOrgId).eq('staff_id', staffId).eq('date', today).maybeSingle();
       if (!existing) { errorEl.textContent = 'No sign-in found for today.'; errorEl.classList.remove('hidden'); return; }
 
-      const { error } = await sbClient.from('attendance').update({ time_out: new Date().toISOString() }).eq('id', existing.id);
+      const { error } = await sbClient.from('attendance').update({ time_out: new Date().toISOString(), photo_out: capturedPhotoDataUrl }).eq('id', existing.id);
       if (error) { errorEl.textContent = 'Sign-out failed: ' + error.message; errorEl.classList.remove('hidden'); return; }
+      resetCapturedPhoto();
       loadTodayAttendance();
     }
 
@@ -491,14 +576,16 @@
       wrap.innerHTML = `
         <table class="w-full text-sm text-left">
           <thead class="bg-slate-50 text-slate-500 uppercase text-xs font-bold">
-            <tr><th class="px-4 py-3">Name</th><th class="px-4 py-3">In</th><th class="px-4 py-3">Out</th><th class="px-4 py-3"></th></tr>
+            <tr><th class="px-4 py-3">Name</th><th class="px-4 py-3">In</th><th class="px-4 py-3">Photo</th><th class="px-4 py-3">Out</th><th class="px-4 py-3">Photo</th><th class="px-4 py-3"></th></tr>
           </thead>
           <tbody class="divide-y divide-slate-100">
             ${data.map(a => `
               <tr>
                 <td class="px-4 py-3 font-medium text-slate-800">${a.name ?? '—'}</td>
                 <td class="px-4 py-3">${a.time_in ? new Date(a.time_in).toLocaleTimeString() : '—'}</td>
+                <td class="px-4 py-3">${a.photo_in ? `<img src="${a.photo_in}" class="w-10 h-10 rounded-lg object-cover border border-slate-200">` : '—'}</td>
                 <td class="px-4 py-3">${a.time_out ? new Date(a.time_out).toLocaleTimeString() : '<span class="text-emerald-600 font-semibold">Still in</span>'}</td>
+                <td class="px-4 py-3">${a.photo_out ? `<img src="${a.photo_out}" class="w-10 h-10 rounded-lg object-cover border border-slate-200">` : '—'}</td>
                 <td class="px-4 py-3"><button onclick="handleDeleteAttendance(${a.id})" class="text-red-400 hover:text-red-600 text-xs font-semibold"><i class="fa-solid fa-trash"></i></button></td>
               </tr>
             `).join('')}
@@ -527,7 +614,7 @@
               <p class="text-xs text-slate-500">List the details you want to capture, separated by commas (e.g. Name, ID Number, Phone, Organization)</p>
               <input type="text" id="new-event-fields" placeholder="Name, ID Number, Phone" class="field-input">
               <div class="grid grid-cols-2 gap-3">
-                <button onclick="handleCreateEvent()" class="py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-semibold rounded-xl transition">Create Event</button>
+                <button onclick="handleCreateEvent()" class="py-2.5 brand-bg text-white font-semibold rounded-xl transition">Create Event</button>
                 <button onclick="toggleNewEventForm()" class="py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-xl transition">Cancel</button>
               </div>
             </div>
@@ -583,7 +670,7 @@
             <div class="flex justify-between items-center gap-2">
               <h5 class="font-bold text-slate-900">${ev.title}</h5>
               <div class="flex items-center gap-2">
-                <button onclick="toggleEventCheckinForm(${ev.id})" class="text-xs font-semibold py-1.5 px-3 bg-slate-900 text-white rounded-lg">Check In</button>
+                <button onclick="toggleEventCheckinForm(${ev.id})" class="text-xs font-semibold py-1.5 px-3 brand-bg text-white rounded-lg">Check In</button>
                 <button onclick="handleDeleteEvent(${ev.id})" class="text-red-400 hover:text-red-600 text-xs font-semibold"><i class="fa-solid fa-trash"></i></button>
               </div>
             </div>
