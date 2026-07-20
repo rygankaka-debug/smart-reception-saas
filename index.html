@@ -602,7 +602,11 @@
     }
 
     // ===================== EVENTS TAB =====================
+    let currentEventDetailId = null;
+    let currentEventEntries = [];
+
     function renderEventsTab(container) {
+      currentEventDetailId = null;
       container.innerHTML = `
         <div class="space-y-6">
           <div class="bg-white border border-slate-200 rounded-xl p-6 space-y-3">
@@ -636,7 +640,7 @@
       const title = document.getElementById('new-event-title').value.trim();
       const fields = document.getElementById('new-event-fields').value.trim();
       if (!title) { alert('Event title is required.'); return; }
-      const { error } = await sbClient.from('events').insert({ organization_id: userOrgId, title, fields: fields || null });
+      const { error } = await sbClient.from('events').insert({ organization_id: userOrgId, title, fields: fields || null, status: 'open' });
       if (error) { alert('Failed to create event: ' + error.message); return; }
       document.getElementById('new-event-title').value = '';
       document.getElementById('new-event-fields').value = '';
@@ -660,32 +664,23 @@
 
     function renderEventsList(events) {
       const wrap = document.getElementById('events-list-wrap');
+      if (!wrap) return;
       if (!events || events.length === 0) { wrap.innerHTML = `<div class="text-center text-slate-400 text-sm py-4">No events yet. Tap "+ New Event" to create one.</div>`; return; }
 
       wrap.innerHTML = `
         <div class="bg-white border border-slate-200 rounded-xl overflow-x-auto">
           <table class="w-full text-sm text-left">
             <thead class="bg-slate-50 text-slate-500 uppercase text-xs font-bold">
-              <tr><th class="px-4 py-3">Title</th><th class="px-4 py-3">Custom Fields</th><th class="px-4 py-3">Created</th><th class="px-4 py-3"></th></tr>
+              <tr><th class="px-4 py-3">Title</th><th class="px-4 py-3">Status</th><th class="px-4 py-3">Created</th><th class="px-4 py-3"></th></tr>
             </thead>
             <tbody class="divide-y divide-slate-100">
               ${events.map(ev => `
-                <tr>
+                <tr class="cursor-pointer hover:bg-slate-50" onclick="openEventDetail(${ev.id})">
                   <td class="px-4 py-3 font-medium text-slate-800">${ev.title}</td>
-                  <td class="px-4 py-3 text-slate-500 text-xs">${ev.fields || '—'}</td>
+                  <td class="px-4 py-3">${ev.status === 'closed' ? '<span class="text-slate-400">Closed</span>' : '<span class="text-emerald-600 font-semibold">Open</span>'}</td>
                   <td class="px-4 py-3 text-slate-500 text-xs">${ev.created_at ? new Date(ev.created_at).toLocaleDateString() : '—'}</td>
-                  <td class="px-4 py-3 whitespace-nowrap">
-                    <button onclick="toggleEventCheckinForm(${ev.id})" class="text-xs font-semibold py-1 px-2.5 brand-bg text-white rounded-lg mr-2">Check In</button>
+                  <td class="px-4 py-3 text-right" onclick="event.stopPropagation()">
                     <button onclick="handleDeleteEvent(${ev.id})" class="text-red-400 hover:text-red-600 text-xs font-semibold"><i class="fa-solid fa-trash"></i></button>
-                  </td>
-                </tr>
-                <tr id="event-checkin-row-${ev.id}" class="hidden">
-                  <td colspan="4" class="px-4 pb-4 bg-slate-50">
-                    <div class="space-y-2 pt-3">
-                      ${buildEventFieldInputs(ev)}
-                      <button onclick="handleEventCheckin(${ev.id})" class="btn-primary text-sm py-2">Submit Check-In</button>
-                      <p id="event-checkin-error-${ev.id}" class="text-red-500 text-xs text-center hidden"></p>
-                    </div>
                   </td>
                 </tr>
               `).join('')}
@@ -695,32 +690,132 @@
       `;
     }
 
-    function buildEventFieldInputs(ev) {
-      const fieldNames = (ev.fields || '').split(',').map(f => f.trim()).filter(Boolean);
-      if (fieldNames.length === 0) return '<p class="text-xs text-slate-400">No custom fields defined for this event.</p>';
-      return fieldNames.map((f, i) => `<input type="text" id="ev-${ev.id}-field-${i}" data-field-name="${f}" placeholder="${f}" class="field-input">`).join('');
-    }
-
     async function handleDeleteEvent(id) {
-      if (!confirm('Delete this event and all its check-ins? This cannot be undone.')) return;
+      if (!confirm('Delete this event and all its entries? This cannot be undone.')) return;
       await sbClient.from('event_checkins').delete().eq('event_id', id);
       const { error } = await sbClient.from('events').delete().eq('id', id);
       if (error) { alert('Failed to delete: ' + error.message); return; }
       await loadEvents();
     }
 
-    function toggleEventCheckinForm(eventId) {
-      document.getElementById(`event-checkin-row-${eventId}`).classList.toggle('hidden');
+    // -------- Event detail view --------
+    async function openEventDetail(eventId) {
+      currentEventDetailId = eventId;
+      const container = document.getElementById('tab-content');
+      const ev = eventsCache.find(e => e.id === eventId);
+      if (!ev) return;
+
+      const fieldNames = (ev.fields || '').split(',').map(f => f.trim()).filter(Boolean);
+      const fieldInputs = fieldNames.length > 0
+        ? fieldNames.map((f, i) => `<input type="text" id="entry-field-${i}" data-field-name="${f}" placeholder="${f.toUpperCase()}" class="field-input">`).join('')
+        : '<p class="text-xs text-slate-400">No custom fields defined for this event.</p>';
+
+      container.innerHTML = `
+        <div class="space-y-4 max-w-2xl">
+          <button onclick="switchTab('events')" class="w-full py-2.5 bg-slate-50 hover:bg-slate-100 text-slate-600 font-semibold text-sm rounded-xl border border-slate-200 transition">
+            <i class="fa-solid fa-arrow-left mr-1.5"></i> Back to Events
+          </button>
+
+          <div>
+            <h4 class="text-xl font-bold text-slate-900">${ev.title}</h4>
+            <p class="text-xs text-slate-400 mt-1">Status: ${ev.status || 'open'} &middot; Created ${ev.created_at ? new Date(ev.created_at).toLocaleDateString() : '—'}</p>
+          </div>
+
+          <div class="space-y-2">
+            ${fieldInputs}
+          </div>
+          <button onclick="handleAddEventEntry(${ev.id})" class="btn-primary">Add Entry</button>
+          <p id="entry-error" class="text-red-500 text-sm text-center font-medium hidden"></p>
+
+          <div class="grid grid-cols-2 gap-3">
+            <button onclick="handleExportEventExcel(${ev.id})" class="py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-sm rounded-xl transition">Export Excel</button>
+            <button onclick="handleToggleEventStatus(${ev.id})" class="py-2.5 bg-red-50 hover:bg-red-100 text-red-600 font-semibold text-sm rounded-xl transition">${ev.status === 'closed' ? 'Reopen Event' : 'Close Event'}</button>
+          </div>
+          <button onclick="handleDeleteEvent(${ev.id})" class="w-full py-2.5 bg-red-500 hover:bg-red-600 text-white font-semibold text-sm rounded-xl transition">Delete Event</button>
+
+          <h5 class="font-bold text-slate-900 pt-2">Entries (<span id="entry-count">0</span>)</h5>
+          <div id="event-entries-wrap" class="bg-white border border-slate-200 rounded-xl overflow-x-auto">
+            <div class="p-6 text-center text-slate-400 text-sm">Loading entries…</div>
+          </div>
+        </div>
+      `;
+
+      loadEventEntries(ev);
     }
 
-    async function handleEventCheckin(eventId) {
+    async function loadEventEntries(ev) {
+      const wrap = document.getElementById('event-entries-wrap');
+      const { data, error } = await sbClient.from('event_checkins').select('*').eq('event_id', ev.id).order('created_at', { ascending: false });
+      if (error) { wrap.innerHTML = `<div class="p-6 text-center text-red-500 text-sm">${error.message}</div>`; return; }
+
+      currentEventEntries = data || [];
+      const countEl = document.getElementById('entry-count');
+      if (countEl) countEl.textContent = currentEventEntries.length;
+
+      const fieldNames = (ev.fields || '').split(',').map(f => f.trim()).filter(Boolean);
+      if (currentEventEntries.length === 0) { wrap.innerHTML = `<div class="p-6 text-center text-slate-400 text-sm">No entries yet.</div>`; return; }
+
+      wrap.innerHTML = `
+        <table class="w-full text-sm text-left">
+          <thead class="brand-bg text-white uppercase text-xs font-bold">
+            <tr>${fieldNames.map(f => `<th class="px-4 py-3">${f}</th>`).join('')}<th class="px-4 py-3"></th></tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100">
+            ${currentEventEntries.map(entry => `
+              <tr>
+                ${fieldNames.map(f => `<td class="px-4 py-3">${(entry.data && entry.data[f]) || '—'}</td>`).join('')}
+                <td class="px-4 py-3"><button onclick="handleDeleteEventEntry(${entry.id}, ${ev.id})" class="text-red-400 hover:text-red-600 text-xs font-semibold"><i class="fa-solid fa-trash"></i></button></td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      `;
+    }
+
+    async function handleAddEventEntry(eventId) {
       const data = {};
-      document.querySelectorAll(`[id^="ev-${eventId}-field-"]`).forEach(input => { data[input.dataset.fieldName] = input.value; });
-      const errorEl = document.getElementById(`event-checkin-error-${eventId}`);
+      document.querySelectorAll('[id^="entry-field-"]').forEach(input => { data[input.dataset.fieldName] = input.value; });
+      const errorEl = document.getElementById('entry-error');
+      errorEl.classList.add('hidden');
+
       const { error } = await sbClient.from('event_checkins').insert({ event_id: eventId, organization_id: userOrgId, data });
-      if (error) { errorEl.textContent = 'Check-in failed: ' + error.message; errorEl.classList.remove('hidden'); return; }
-      alert('Checked in successfully!');
-      document.getElementById(`event-checkin-row-${eventId}`).classList.add('hidden');
+      if (error) { errorEl.textContent = 'Failed to add entry: ' + error.message; errorEl.classList.remove('hidden'); return; }
+
+      document.querySelectorAll('[id^="entry-field-"]').forEach(input => { input.value = ''; });
+      const ev = eventsCache.find(e => e.id === eventId);
+      loadEventEntries(ev);
+    }
+
+    async function handleDeleteEventEntry(entryId, eventId) {
+      if (!confirm('Delete this entry?')) return;
+      const { error } = await sbClient.from('event_checkins').delete().eq('id', entryId);
+      if (error) { alert('Failed to delete: ' + error.message); return; }
+      const ev = eventsCache.find(e => e.id === eventId);
+      loadEventEntries(ev);
+    }
+
+    async function handleToggleEventStatus(eventId) {
+      const ev = eventsCache.find(e => e.id === eventId);
+      const newStatus = ev.status === 'closed' ? 'open' : 'closed';
+      const { error } = await sbClient.from('events').update({ status: newStatus }).eq('id', eventId);
+      if (error) { alert('Failed to update status: ' + error.message); return; }
+      await loadEvents();
+      openEventDetail(eventId);
+    }
+
+    function handleExportEventExcel(eventId) {
+      const ev = eventsCache.find(e => e.id === eventId);
+      if (!currentEventEntries || currentEventEntries.length === 0) { alert('No entries to export yet.'); return; }
+      const fieldNames = (ev.fields || '').split(',').map(f => f.trim()).filter(Boolean);
+      const rows = currentEventEntries.map(entry => {
+        const row = {};
+        fieldNames.forEach(f => { row[f] = (entry.data && entry.data[f]) || ''; });
+        return row;
+      });
+      const ws = XLSX.utils.json_to_sheet(rows);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, ev.title.slice(0, 30));
+      XLSX.writeFile(wb, `${ev.title.replace(/[^a-z0-9]/gi, '_')}_entries.xlsx`);
     }
 
     // ===================== HISTORY TAB =====================
