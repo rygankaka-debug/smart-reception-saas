@@ -690,6 +690,24 @@
       loadTodayAttendance();
     }
 
+    // Returns the formatted time_in plus a "Late" badge if it's after org_settings.late_after
+    function renderTimeInCell(timeInIso) {
+      if (!timeInIso) return '—';
+      const t = new Date(timeInIso);
+      const label = t.toLocaleTimeString();
+      const lateAfter = orgSettings.late_after; // e.g. "08:05:00" or "08:05"
+      if (!lateAfter) return label;
+
+      const [lh, lm] = lateAfter.split(':').map(Number);
+      const minutes = t.getHours() * 60 + t.getMinutes();
+      const lateThreshold = lh * 60 + lm;
+
+      if (minutes > lateThreshold) {
+        return `${label} <span class="ml-1 text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded bg-red-500/20 text-red-400">Late</span>`;
+      }
+      return label;
+    }
+
     async function loadTodayAttendance() {
       const wrap = document.getElementById('attendance-table-wrap');
       if (!wrap) return;
@@ -708,7 +726,7 @@
             ${data.map(a => `
               <tr>
                 <td class="px-4 py-3 font-medium text-main">${a.name ?? '—'}</td>
-                <td class="px-4 py-3">${a.time_in ? new Date(a.time_in).toLocaleTimeString() : '—'}</td>
+                <td class="px-4 py-3 whitespace-nowrap">${renderTimeInCell(a.time_in)}</td>
                 <td class="px-4 py-3">${a.photo_in ? `<img src="${a.photo_in}" class="w-10 h-10 rounded-lg object-cover border border-main">` : '—'}</td>
                 <td class="px-4 py-3">${a.time_out ? new Date(a.time_out).toLocaleTimeString() : '<span class="text-emerald-600 font-semibold">Still in</span>'}</td>
                 <td class="px-4 py-3">${a.photo_out ? `<img src="${a.photo_out}" class="w-10 h-10 rounded-lg object-cover border border-main">` : '—'}</td>
@@ -992,7 +1010,7 @@
       if (aErr) { aWrap.innerHTML = `<div class="p-6 text-center text-red-500 text-sm">${aErr.message}</div>`; }
       else if (!attendance || attendance.length === 0) { aWrap.innerHTML = `<div class="p-6 text-center text-muted text-sm">No staff attendance that day.</div>`; }
       else {
-        aWrap.innerHTML = `<table class="w-full text-sm text-left"><thead class="surface-alt text-muted uppercase text-xs font-bold"><tr><th class="px-4 py-3">Name</th><th class="px-4 py-3">In</th><th class="px-4 py-3">Out</th></tr></thead><tbody class="divide-y divide-slate-100">${attendance.map(a => `<tr><td class="px-4 py-3">${a.name ?? '—'}</td><td class="px-4 py-3">${a.time_in ? new Date(a.time_in).toLocaleTimeString() : '—'}</td><td class="px-4 py-3">${a.time_out ? new Date(a.time_out).toLocaleTimeString() : '—'}</td></tr>`).join('')}</tbody></table>`;
+        aWrap.innerHTML = `<table class="w-full text-sm text-left"><thead class="surface-alt text-muted uppercase text-xs font-bold"><tr><th class="px-4 py-3">Name</th><th class="px-4 py-3">In</th><th class="px-4 py-3">Out</th></tr></thead><tbody class="divide-y divide-slate-100">${attendance.map(a => `<tr><td class="px-4 py-3">${a.name ?? '—'}</td><td class="px-4 py-3 whitespace-nowrap">${renderTimeInCell(a.time_in)}</td><td class="px-4 py-3">${a.time_out ? new Date(a.time_out).toLocaleTimeString() : '—'}</td></tr>`).join('')}</tbody></table>`;
       }
     }
 
