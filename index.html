@@ -80,35 +80,6 @@
       </form>
       <p id="login-error" class="text-red-500 text-sm mt-3 text-center font-medium hidden"></p>
       <button onclick="showScreen('reset-request-screen')" class="w-full text-center text-sm text-muted hover:text-muted mt-4">Forgot password?</button>
-      <div class="border-t border-main mt-4 pt-4 text-center">
-        <p class="text-sm text-muted">New here?</p>
-        <button onclick="showScreen('signup-screen')" class="text-sm brand-text font-semibold mt-1">Create your organization's workspace</button>
-      </div>
-    </div>
-
-    <div id="signup-screen" class="hidden w-full max-w-md surface p-8 rounded-2xl shadow-xl border border-main">
-      <div class="text-center mb-6">
-        <h2 class="text-xl font-bold text-main">Create Your Workspace</h2>
-        <p class="text-sm text-muted mt-1">Set up your organization in under a minute</p>
-      </div>
-      <form id="signup-form" class="space-y-4">
-        <div>
-          <label class="block text-sm font-semibold text-main mb-1">Organization / Company Name</label>
-          <input type="text" id="signup-org-name" required placeholder="e.g. Acme Logistics Ltd" class="field-input">
-        </div>
-        <div>
-          <label class="block text-sm font-semibold text-main mb-1">Your Email Address</label>
-          <input type="email" id="signup-email" required placeholder="you@company.com" class="field-input">
-        </div>
-        <div>
-          <label class="block text-sm font-semibold text-main mb-1">Password</label>
-          <input type="password" id="signup-password" required placeholder="At least 6 characters" class="field-input">
-        </div>
-        <button type="submit" class="w-full py-3 brand-bg text-white font-semibold rounded-xl shadow-md transition">Create Workspace</button>
-      </form>
-      <p id="signup-error" class="text-red-500 text-sm mt-3 text-center font-medium hidden"></p>
-      <p id="signup-success" class="text-emerald-600 text-sm mt-3 text-center font-medium hidden"></p>
-      <button onclick="showScreen('auth-screen')" class="w-full text-center text-sm text-muted hover:text-main mt-4">Already have an account? Sign In</button>
     </div>
 
     <div id="reset-request-screen" class="hidden w-full max-w-md surface p-8 rounded-2xl shadow-xl border border-main">
@@ -223,53 +194,9 @@
       else { setupUserSession(data.user); }
     });
 
-    document.getElementById('signup-form').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const orgName = document.getElementById('signup-org-name').value.trim();
-      const email = document.getElementById('signup-email').value.trim();
-      const password = document.getElementById('signup-password').value;
-      const errorEl = document.getElementById('signup-error');
-      const successEl = document.getElementById('signup-success');
-      errorEl.classList.add('hidden');
-      successEl.classList.add('hidden');
-
-      if (!orgName || !email || password.length < 6) {
-        errorEl.textContent = 'Fill in all fields — password needs at least 6 characters.';
-        errorEl.classList.remove('hidden');
-        return;
-      }
-
-      // Stash the org name in metadata now; we can't create the organizations row until
-      // we know we have an authenticated session (RLS requires it).
-      const { data, error } = await sbClient.auth.signUp({
-        email, password,
-        options: { data: { pending_org_name: orgName } }
-      });
-
-      if (error) { errorEl.textContent = error.message; errorEl.classList.remove('hidden'); return; }
-
-      if (data.session && data.user) {
-        // Email confirmation is off — we're already logged in, finish setup right now
-        setupUserSession(data.user);
-      } else {
-        // Email confirmation is required — org gets created automatically on their first login
-        successEl.textContent = 'Account created! Check your email to confirm, then sign in to finish setting up your workspace.';
-        successEl.classList.remove('hidden');
-        document.getElementById('signup-form').reset();
-      }
-    });
-
     async function setupUserSession(user) {
       currentUser = user;
       userOrgId = user.user_metadata?.organization_id;
-
-      // Bridge for a freshly signed-up user who hasn't gotten their org created yet
-      // (happens if Supabase email confirmation is required, so org creation was deferred to first login)
-      if (!userOrgId && user.user_metadata?.pending_org_name) {
-        const created = await finalizeNewOrgSetup(user, user.user_metadata.pending_org_name);
-        if (!created) { await handleLogout(); return; }
-        userOrgId = created;
-      }
 
       if (!userOrgId) {
         showToast("This login account has no organization linked to it. Contact support.", 'error');
@@ -281,31 +208,6 @@
       await loadStaffCache();
       showScreen('app-workspace');
       switchTab('visitors');
-    }
-
-    // Creates the organizations row and links it to this user, returns the new org id (or null on failure)
-    async function finalizeNewOrgSetup(user, orgName) {
-      const { data: newOrg, error: orgError } = await sbClient
-        .from('organizations')
-        .insert({ name: orgName })
-        .select('id')
-        .single();
-
-      if (orgError) {
-        showToast('Could not create your organization: ' + orgError.message, 'error');
-        return null;
-      }
-
-      const { error: updateError } = await sbClient.auth.updateUser({
-        data: { organization_id: newOrg.id, pending_org_name: null }
-      });
-
-      if (updateError) {
-        showToast('Organization created, but linking your account failed: ' + updateError.message, 'error');
-        return null;
-      }
-
-      return newOrg.id;
     }
 
     async function loadOrganizationSettings() {
@@ -334,7 +236,7 @@
     }
 
     function showScreen(screenId) {
-      ['auth-screen', 'signup-screen', 'reset-request-screen', 'reset-password-screen', 'app-workspace'].forEach(id => {
+      ['auth-screen', 'reset-request-screen', 'reset-password-screen', 'app-workspace'].forEach(id => {
         document.getElementById(id).classList.add('hidden');
       });
       document.getElementById(screenId).classList.remove('hidden');
