@@ -212,15 +212,34 @@
 
     async function loadOrganizationSettings() {
       try {
-        const { data } = await sbClient.from('org_settings').select('*').eq('organization_id', userOrgId).maybeSingle();
-        if (data) { orgSettings = data; }
-        else {
-          const { data: newSettings } = await sbClient.from('org_settings').insert({ organization_id: userOrgId }).select().single();
-          orgSettings = newSettings;
+        let { data } = await sbClient.from('org_settings').select('*').eq('organization_id', userOrgId).maybeSingle();
+
+        if (!data) {
+          const { data: inserted, error: insertError } = await sbClient
+            .from('org_settings')
+            .insert({ organization_id: userOrgId })
+            .select()
+            .maybeSingle();
+
+          if (insertError) {
+            // Someone/something else (e.g. another open tab) created it a moment earlier — just fetch it instead of failing.
+            const retry = await sbClient.from('org_settings').select('*').eq('organization_id', userOrgId).maybeSingle();
+            data = retry.data;
+          } else {
+            data = inserted;
+          }
         }
+
+        orgSettings = data || {};
         if (!Array.isArray(orgSettings.extra_visitor_fields)) orgSettings.extra_visitor_fields = [];
         applyBranding();
-      } catch (err) { console.error("Critical loading configuration error:", err.message); }
+      } catch (err) {
+        console.error("Critical loading configuration error:", err.message);
+        // Never leave orgSettings null — fall back to safe empty defaults so the UI doesn't crash.
+        orgSettings = orgSettings && typeof orgSettings === 'object' ? orgSettings : {};
+        if (!Array.isArray(orgSettings.extra_visitor_fields)) orgSettings.extra_visitor_fields = [];
+        applyBranding();
+      }
     }
 
     function applyBranding() {
