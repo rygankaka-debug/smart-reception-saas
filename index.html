@@ -991,24 +991,40 @@
 
     // ===================== HISTORY TAB =====================
     function renderHistoryTab(container) {
+      const today = new Date().toISOString().slice(0, 10);
       container.innerHTML = `
         <div class="space-y-6">
           <div class="surface border border-main rounded-xl p-6 space-y-3">
             <h4 class="text-base font-bold text-main">History Search</h4>
-            <p class="text-sm text-muted">Search visitor and staff records for any past date.</p>
-            <input type="date" id="history-date" class="field-input">
+            <p class="text-sm text-muted">Search visitor and staff records across any date range — pick the same date twice for a single day.</p>
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="text-xs text-muted">From</label>
+                <input type="date" id="history-start" value="${today}" class="field-input">
+              </div>
+              <div>
+                <label class="text-xs text-muted">To</label>
+                <input type="date" id="history-end" value="${today}" class="field-input">
+              </div>
+            </div>
             <button onclick="handleHistorySearch()" class="btn-primary">Search</button>
           </div>
+
+          <div class="surface-alt border border-main rounded-xl p-6 text-center">
+            <div class="text-xs font-bold uppercase tracking-wider text-muted">Total Visitors In Range</div>
+            <div id="history-visitor-total" class="text-4xl font-bold text-main mt-2">—</div>
+          </div>
+
           <div>
-            <h5 class="font-bold text-main mb-2">Visitors that day</h5>
+            <h5 class="font-bold text-main mb-2">Visitors in this range</h5>
             <div id="history-visitors-wrap" class="surface border border-main rounded-xl overflow-x-auto">
-              <div class="p-6 text-center text-muted text-sm">Pick a date and search.</div>
+              <div class="p-6 text-center text-muted text-sm">Pick a range and search.</div>
             </div>
           </div>
           <div>
-            <h5 class="font-bold text-main mb-2">Staff attendance that day</h5>
+            <h5 class="font-bold text-main mb-2">Staff attendance in this range</h5>
             <div id="history-attendance-wrap" class="surface border border-main rounded-xl overflow-x-auto">
-              <div class="p-6 text-center text-muted text-sm">Pick a date and search.</div>
+              <div class="p-6 text-center text-muted text-sm">Pick a range and search.</div>
             </div>
           </div>
         </div>
@@ -1016,28 +1032,38 @@
     }
 
     async function handleHistorySearch() {
-      const date = document.getElementById('history-date').value;
+      const startDate = document.getElementById('history-start').value;
+      const endDate = document.getElementById('history-end').value;
       const vWrap = document.getElementById('history-visitors-wrap');
       const aWrap = document.getElementById('history-attendance-wrap');
-      if (!date) { showToast('Pick a date first.', 'error'); return; }
+      const totalEl = document.getElementById('history-visitor-total');
 
-      const dayStart = `${date}T00:00:00`;
-      const dayEnd = `${date}T23:59:59`;
+      if (!startDate || !endDate) { showToast('Pick both a start and end date.', 'error'); return; }
+      if (startDate > endDate) { showToast('Start date must be before end date.', 'error'); return; }
+
+      const rangeStart = `${startDate}T00:00:00`;
+      const rangeEnd = `${endDate}T23:59:59`;
 
       const { data: visitors, error: vErr } = await sbClient.from('visitors').select('*')
-        .eq('organization_id', userOrgId).gte('time', dayStart).lte('time', dayEnd).order('time');
-      if (vErr) { vWrap.innerHTML = `<div class="p-6 text-center text-red-500 text-sm">${vErr.message}</div>`; }
-      else if (!visitors || visitors.length === 0) { vWrap.innerHTML = `<div class="p-6 text-center text-muted text-sm">No visitors that day.</div>`; }
-      else {
-        vWrap.innerHTML = `<table class="w-full text-sm text-left"><thead class="surface-alt text-muted uppercase text-xs font-bold"><tr><th class="px-4 py-3">Name</th><th class="px-4 py-3">ID</th><th class="px-4 py-3">Time</th></tr></thead><tbody class="divide-y divide-slate-100">${visitors.map(v => `<tr><td class="px-4 py-3">${v.name ?? '—'}</td><td class="px-4 py-3 font-mono text-xs">${v.visitor_id ?? '—'}</td><td class="px-4 py-3">${v.time ? new Date(v.time).toLocaleTimeString() : '—'}</td></tr>`).join('')}</tbody></table>`;
+        .eq('organization_id', userOrgId).gte('time', rangeStart).lte('time', rangeEnd).order('time');
+
+      if (vErr) {
+        vWrap.innerHTML = `<div class="p-6 text-center text-red-500 text-sm">${vErr.message}</div>`;
+        totalEl.textContent = '—';
+      } else {
+        totalEl.textContent = visitors.length;
+        if (visitors.length === 0) { vWrap.innerHTML = `<div class="p-6 text-center text-muted text-sm">No visitors in this range.</div>`; }
+        else {
+          vWrap.innerHTML = `<table class="w-full text-sm text-left"><thead class="surface-alt text-muted uppercase text-xs font-bold"><tr><th class="px-4 py-3">Name</th><th class="px-4 py-3">ID</th><th class="px-4 py-3">Date</th><th class="px-4 py-3">Time</th></tr></thead><tbody class="divide-y divide-slate-100">${visitors.map(v => `<tr><td class="px-4 py-3">${v.name ?? '—'}</td><td class="px-4 py-3 font-mono text-xs">${v.visitor_id ?? '—'}</td><td class="px-4 py-3">${v.time ? new Date(v.time).toLocaleDateString() : '—'}</td><td class="px-4 py-3">${v.time ? new Date(v.time).toLocaleTimeString() : '—'}</td></tr>`).join('')}</tbody></table>`;
+        }
       }
 
       const { data: attendance, error: aErr } = await sbClient.from('attendance').select('*')
-        .eq('organization_id', userOrgId).eq('date', date).order('time_in');
+        .eq('organization_id', userOrgId).gte('date', startDate).lte('date', endDate).order('date').order('time_in');
       if (aErr) { aWrap.innerHTML = `<div class="p-6 text-center text-red-500 text-sm">${aErr.message}</div>`; }
-      else if (!attendance || attendance.length === 0) { aWrap.innerHTML = `<div class="p-6 text-center text-muted text-sm">No staff attendance that day.</div>`; }
+      else if (!attendance || attendance.length === 0) { aWrap.innerHTML = `<div class="p-6 text-center text-muted text-sm">No staff attendance in this range.</div>`; }
       else {
-        aWrap.innerHTML = `<table class="w-full text-sm text-left"><thead class="surface-alt text-muted uppercase text-xs font-bold"><tr><th class="px-4 py-3">Name</th><th class="px-4 py-3">In</th><th class="px-4 py-3">Out</th></tr></thead><tbody class="divide-y divide-slate-100">${attendance.map(a => `<tr><td class="px-4 py-3">${a.name ?? '—'}</td><td class="px-4 py-3 whitespace-nowrap">${renderTimeInCell(a.time_in)}</td><td class="px-4 py-3">${a.time_out ? new Date(a.time_out).toLocaleTimeString() : '—'}</td></tr>`).join('')}</tbody></table>`;
+        aWrap.innerHTML = `<table class="w-full text-sm text-left"><thead class="surface-alt text-muted uppercase text-xs font-bold"><tr><th class="px-4 py-3">Name</th><th class="px-4 py-3">Date</th><th class="px-4 py-3">In</th><th class="px-4 py-3">Out</th></tr></thead><tbody class="divide-y divide-slate-100">${attendance.map(a => `<tr><td class="px-4 py-3">${a.name ?? '—'}</td><td class="px-4 py-3 text-xs text-muted">${a.date ?? '—'}</td><td class="px-4 py-3 whitespace-nowrap">${renderTimeInCell(a.time_in)}</td><td class="px-4 py-3">${a.time_out ? new Date(a.time_out).toLocaleTimeString() : '—'}</td></tr>`).join('')}</tbody></table>`;
       }
     }
 
