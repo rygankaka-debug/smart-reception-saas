@@ -232,12 +232,14 @@
 
         orgSettings = data || {};
         if (!Array.isArray(orgSettings.extra_visitor_fields)) orgSettings.extra_visitor_fields = [];
+        if (!orgSettings.visitor_field_config || typeof orgSettings.visitor_field_config !== 'object') orgSettings.visitor_field_config = {};
         applyBranding();
       } catch (err) {
         console.error("Critical loading configuration error:", err.message);
         // Never leave orgSettings null — fall back to safe empty defaults so the UI doesn't crash.
         orgSettings = orgSettings && typeof orgSettings === 'object' ? orgSettings : {};
         if (!Array.isArray(orgSettings.extra_visitor_fields)) orgSettings.extra_visitor_fields = [];
+        if (!orgSettings.visitor_field_config || typeof orgSettings.visitor_field_config !== 'object') orgSettings.visitor_field_config = {};
         applyBranding();
       }
     }
@@ -325,24 +327,30 @@
       const extraFieldInputs = (orgSettings.extra_visitor_fields || []).map((f, i) =>
         `<input type="text" id="checkin-extra-${i}" data-field-name="${f}" placeholder="${f}" class="field-input">`
       ).join('');
+      const fieldConfig = orgSettings.visitor_field_config || {};
+      const showId = fieldConfig.id_number !== false;
+      const showPhone = fieldConfig.phone !== false;
+      const showPurpose = fieldConfig.purpose !== false;
+      const showOffice = fieldConfig.office !== false;
 
       container.innerHTML = `
         <div class="space-y-6">
           <div class="surface border border-main rounded-xl p-6 space-y-3">
             <h4 class="text-base font-bold text-main"><i class="fa-solid fa-clipboard-user mr-2 text-muted"></i>Visitor Check-In</h4>
             <form id="checkin-form" class="space-y-3">
-              <input type="text" id="checkin-id" placeholder="ID Number" required class="field-input">
+              ${showId ? `<input type="text" id="checkin-id" placeholder="ID Number" required class="field-input">` : ''}
               <input type="text" id="checkin-name" placeholder="Full Name" required class="field-input">
-              <input type="tel" id="checkin-phone" placeholder="Phone Number" required class="field-input">
+              ${showPhone ? `<input type="tel" id="checkin-phone" placeholder="Phone Number" required class="field-input">` : ''}
+              ${showOffice ? `
               <select id="checkin-office" class="field-input">
                 <option value="">Select Office / Department (optional)</option>
                 ${officeOptions}
-              </select>
-              <input type="text" id="checkin-purpose" placeholder="Purpose" required class="field-input">
+              </select>` : ''}
+              ${showPurpose ? `<input type="text" id="checkin-purpose" placeholder="Purpose" required class="field-input">` : ''}
               ${extraFieldInputs}
               <label class="flex items-start gap-2 text-xs text-muted">
                 <input type="checkbox" id="checkin-consent" required class="mt-0.5">
-                I agree that my name, ID number, and phone number will be recorded for front desk and security purposes only.
+                I agree that my details will be recorded for front desk and security purposes only.
               </label>
               <button type="submit" class="btn-primary">Check In</button>
               <p id="checkin-error" class="text-red-500 text-sm text-center font-medium hidden"></p>
@@ -367,11 +375,16 @@
 
     async function handleVisitorCheckIn(e) {
       e.preventDefault();
-      const idNumber = document.getElementById('checkin-id').value.trim();
+      const idEl = document.getElementById('checkin-id');
+      const phoneEl = document.getElementById('checkin-phone');
+      const officeEl = document.getElementById('checkin-office');
+      const purposeEl = document.getElementById('checkin-purpose');
+
+      const idNumber = idEl ? idEl.value.trim() : null;
       const name = document.getElementById('checkin-name').value.trim();
-      const phone = document.getElementById('checkin-phone').value.trim();
-      const office = document.getElementById('checkin-office').value;
-      const purpose = document.getElementById('checkin-purpose').value.trim();
+      const phone = phoneEl ? phoneEl.value.trim() : null;
+      const office = officeEl ? officeEl.value : null;
+      const purpose = purposeEl ? purposeEl.value.trim() : null;
       const errorEl = document.getElementById('checkin-error');
       errorEl.classList.add('hidden');
 
@@ -380,18 +393,21 @@
         extraFields[input.dataset.fieldName] = input.value;
       });
 
-      const { data: alreadyIn } = await sbClient
-        .from('visitors')
-        .select('id')
-        .eq('organization_id', userOrgId)
-        .eq('visitor_id', idNumber)
-        .is('time_out', null)
-        .maybeSingle();
+      // Duplicate-checkin prevention only works when the ID Number field is enabled for this org
+      if (idNumber) {
+        const { data: alreadyIn } = await sbClient
+          .from('visitors')
+          .select('id')
+          .eq('organization_id', userOrgId)
+          .eq('visitor_id', idNumber)
+          .is('time_out', null)
+          .maybeSingle();
 
-      if (alreadyIn) {
-        errorEl.textContent = `Visitor ID ${idNumber} is already checked in and hasn't been checked out yet.`;
-        errorEl.classList.remove('hidden');
-        return;
+        if (alreadyIn) {
+          errorEl.textContent = `Visitor ID ${idNumber} is already checked in and hasn't been checked out yet.`;
+          errorEl.classList.remove('hidden');
+          return;
+        }
       }
 
       const { error } = await sbClient.from('visitors').insert({
@@ -450,12 +466,16 @@
       if (!visitors || visitors.length === 0) { wrap.innerHTML = `<div class="p-6 text-center text-muted text-sm">No visitors found.</div>`; return; }
 
       const extraFieldNames = orgSettings.extra_visitor_fields || [];
+      const fieldConfig = orgSettings.visitor_field_config || {};
+      const showId = fieldConfig.id_number !== false;
+      const showPhone = fieldConfig.phone !== false;
+      const showOffice = fieldConfig.office !== false;
 
       wrap.innerHTML = `
         <table class="w-full text-sm text-left">
           <thead class="surface-alt text-muted uppercase text-xs font-bold">
             <tr>
-              <th class="px-4 py-3">Name</th><th class="px-4 py-3">ID</th><th class="px-4 py-3">Phone</th><th class="px-4 py-3">Office</th>
+              <th class="px-4 py-3">Name</th>${showId ? '<th class="px-4 py-3">ID</th>' : ''}${showPhone ? '<th class="px-4 py-3">Phone</th>' : ''}${showOffice ? '<th class="px-4 py-3">Office</th>' : ''}
               ${extraFieldNames.map(f => `<th class="px-4 py-3">${f}</th>`).join('')}
               <th class="px-4 py-3">Arrived</th><th class="px-4 py-3">Left</th><th class="px-4 py-3"></th>
             </tr>
@@ -464,9 +484,9 @@
             ${visitors.map(v => `
               <tr>
                 <td class="px-4 py-3 font-medium text-main">${v.name ?? '—'}</td>
-                <td class="px-4 py-3 font-mono text-xs text-muted">${v.visitor_id ?? '—'}</td>
-                <td class="px-4 py-3">${v.phone ?? '—'}</td>
-                <td class="px-4 py-3">${v.office ?? '—'}</td>
+                ${showId ? `<td class="px-4 py-3 font-mono text-xs text-muted">${v.visitor_id ?? '—'}</td>` : ''}
+                ${showPhone ? `<td class="px-4 py-3">${v.phone ?? '—'}</td>` : ''}
+                ${showOffice ? `<td class="px-4 py-3">${v.office ?? '—'}</td>` : ''}
                 ${extraFieldNames.map(f => `<td class="px-4 py-3">${(v.extra_fields && v.extra_fields[f]) || '—'}</td>`).join('')}
                 <td class="px-4 py-3">${v.time ? new Date(v.time).toLocaleTimeString() : '—'}</td>
                 <td class="px-4 py-3">${v.time_out ? new Date(v.time_out).toLocaleTimeString() : '<span class="text-emerald-600 font-semibold">Still in</span>'}</td>
@@ -1148,6 +1168,8 @@
 
     // ===================== SETTINGS TAB =====================
     function renderSettingsTab(container) {
+      const fieldConfig = orgSettings.visitor_field_config || {};
+
       const officeItems = officesList.map(o => `
         <div class="flex justify-between items-center px-3 py-2 surface border border-main rounded-lg text-sm">
           <span>${o.name}</span>
@@ -1186,6 +1208,23 @@
               <p id="logo-upload-status" class="text-xs text-muted mt-1"></p>
               <input type="hidden" id="setting-logo" value="${orgSettings.logo_url || ''}">
             </div>
+          </div>
+
+          <div class="space-y-3">
+            <h4 class="text-base font-bold text-main">Visitor Check-In Fields</h4>
+            <p class="text-xs text-muted">Full Name is always required. Choose which other fields your front desk actually needs.</p>
+            <label class="flex items-center gap-2 text-sm text-main">
+              <input type="checkbox" id="field-toggle-id_number" ${fieldConfig.id_number !== false ? 'checked' : ''}> ID Number
+            </label>
+            <label class="flex items-center gap-2 text-sm text-main">
+              <input type="checkbox" id="field-toggle-phone" ${fieldConfig.phone !== false ? 'checked' : ''}> Phone Number
+            </label>
+            <label class="flex items-center gap-2 text-sm text-main">
+              <input type="checkbox" id="field-toggle-purpose" ${fieldConfig.purpose !== false ? 'checked' : ''}> Purpose
+            </label>
+            <label class="flex items-center gap-2 text-sm text-main">
+              <input type="checkbox" id="field-toggle-office" ${fieldConfig.office !== false ? 'checked' : ''}> Office / Department
+            </label>
           </div>
 
           <div class="space-y-3">
@@ -1264,9 +1303,17 @@
       const lateAfter = document.getElementById('setting-late-after').value;
       const earliestSignout = document.getElementById('setting-earliest-signout').value;
 
+      const newFieldConfig = {
+        id_number: document.getElementById('field-toggle-id_number').checked,
+        phone: document.getElementById('field-toggle-phone').checked,
+        purpose: document.getElementById('field-toggle-purpose').checked,
+        office: document.getElementById('field-toggle-office').checked
+      };
+
       const { error } = await sbClient.from('org_settings').update({
         org_name: newName, tagline: newTagline, primary_color: newColor, logo_url: newLogo,
-        late_after: lateAfter, earliest_signout: earliestSignout
+        late_after: lateAfter, earliest_signout: earliestSignout,
+        visitor_field_config: newFieldConfig
       }).eq('organization_id', userOrgId);
 
       if (error) { showToast('Save failed: ' + error.message, 'error'); return; }
