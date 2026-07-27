@@ -1172,7 +1172,20 @@
               <label class="text-xs font-bold text-muted uppercase tracking-wider">Primary Color</label>
               <input type="color" id="setting-color" value="${orgSettings.primary_color || '#2563eb'}" class="w-full h-12 border border-main rounded-xl">
             </div>
-            <input type="text" id="setting-logo" value="${orgSettings.logo_url || ''}" placeholder="Logo image URL (optional)" class="field-input">
+            <div>
+              <label class="text-xs font-bold text-muted uppercase tracking-wider">Logo</label>
+              <div class="flex items-center gap-3 mt-1">
+                <div id="logo-preview-wrap" class="w-16 h-16 rounded-lg border border-main surface-alt flex items-center justify-center overflow-hidden flex-shrink-0">
+                  ${orgSettings.logo_url ? `<img src="${orgSettings.logo_url}" class="w-full h-full object-contain">` : `<span class="text-[10px] text-muted uppercase">No logo</span>`}
+                </div>
+                <div class="flex-grow">
+                  <input type="file" id="logo-file-input" accept="image/*" class="field-input text-sm">
+                </div>
+              </div>
+              <button type="button" onclick="handleLogoUpload()" class="w-full mt-2 py-2.5 surface-alt text-main font-semibold text-sm rounded-xl border border-main">Upload Logo</button>
+              <p id="logo-upload-status" class="text-xs text-muted mt-1"></p>
+              <input type="hidden" id="setting-logo" value="${orgSettings.logo_url || ''}">
+            </div>
           </div>
 
           <div class="space-y-3">
@@ -1211,6 +1224,36 @@
           </div>
         </div>
       `;
+    }
+
+    async function handleLogoUpload() {
+      const fileInput = document.getElementById('logo-file-input');
+      const status = document.getElementById('logo-upload-status');
+      const file = fileInput.files[0];
+
+      if (!file) { status.textContent = 'Choose an image file first.'; status.className = 'text-xs text-red-400 mt-1'; return; }
+      if (!file.type.startsWith('image/')) { status.textContent = 'Please choose an image file.'; status.className = 'text-xs text-red-400 mt-1'; return; }
+
+      status.textContent = 'Uploading…';
+      status.className = 'text-xs text-muted mt-1';
+
+      const ext = file.name.split('.').pop();
+      const fileName = `${userOrgId}/logo-${Date.now()}.${ext}`;
+
+      const { error } = await sbClient.storage.from('org-logos').upload(fileName, file, { contentType: file.type });
+      if (error) {
+        status.textContent = 'Upload failed: ' + error.message;
+        status.className = 'text-xs text-red-400 mt-1';
+        return;
+      }
+
+      const { data } = sbClient.storage.from('org-logos').getPublicUrl(fileName);
+      const publicUrl = data.publicUrl;
+
+      document.getElementById('setting-logo').value = publicUrl;
+      document.getElementById('logo-preview-wrap').innerHTML = `<img src="${publicUrl}" class="w-full h-full object-contain">`;
+      status.textContent = 'Uploaded ✓ — click "Save Branding & Rules" below to apply it.';
+      status.className = 'text-xs text-emerald-400 font-semibold mt-1';
     }
 
     async function handleSaveSettings() {
