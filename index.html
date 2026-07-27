@@ -426,10 +426,16 @@
       if (!wrap) return;
       wrap.innerHTML = `<div class="p-6 text-center text-muted text-sm">Loading visitors…</div>`;
 
+      const now = new Date();
+      const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
+      const todayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
+
       const { data: visitors, error } = await sbClient
         .from('visitors')
         .select('id, visitor_id, name, phone, office, purpose, time, time_out, host_id, extra_fields')
         .eq('organization_id', userOrgId)
+        .gte('time', todayStart.toISOString())
+        .lte('time', todayEnd.toISOString())
         .order('time', { ascending: false });
 
       if (error) { wrap.innerHTML = `<div class="p-6 text-center text-red-500 text-sm">Error loading visitors: ${error.message}</div>`; return; }
@@ -442,8 +448,7 @@
         (hosts || []).forEach(h => { hostNameCache[h.id] = h.name; });
       }
 
-      const todayStr = new Date().toDateString();
-      const todayCount = visitorsCache.filter(v => v.time && new Date(v.time).toDateString() === todayStr).length;
+      const todayCount = visitorsCache.length;
       const countEl = document.getElementById('today-visitor-count');
       if (countEl) countEl.textContent = todayCount;
 
@@ -463,7 +468,7 @@
     function renderVisitorsTable(visitors) {
       const wrap = document.getElementById('visitors-table-wrap');
       if (!wrap) return;
-      if (!visitors || visitors.length === 0) { wrap.innerHTML = `<div class="p-6 text-center text-muted text-sm">No visitors found.</div>`; return; }
+      if (!visitors || visitors.length === 0) { wrap.innerHTML = `<div class="p-6 text-center text-muted text-sm">No visitors checked in today yet.</div>`; return; }
 
       const extraFieldNames = orgSettings.extra_visitor_fields || [];
       const fieldConfig = orgSettings.visitor_field_config || {};
