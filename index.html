@@ -363,7 +363,7 @@
             <div id="visitors-table-wrap" class="surface border border-main rounded-xl overflow-x-auto">
               <div class="p-6 text-center text-muted text-sm">Loading visitors…</div>
             </div>
-            <button onclick="window.print()" class="w-full py-2.5 surface-alt hover:brightness-125 text-main font-semibold text-sm rounded-xl transition">Print Today's Log</button>
+            <button onclick="handlePrintVisitorLog()" class="w-full py-2.5 surface-alt hover:brightness-125 text-main font-semibold text-sm rounded-xl transition">Print Today's Log</button>
           </div>
         </div>
       `;
@@ -504,6 +504,66 @@
           </tbody>
         </table>
       `;
+    }
+
+    function handlePrintVisitorLog() {
+      if (!visitorsCache || visitorsCache.length === 0) {
+        showToast('No visitors to print yet today.', 'error');
+        return;
+      }
+
+      const dateStr = new Date().toLocaleDateString();
+      const orgName = orgSettings.org_name || 'Smart Reception';
+      const fieldConfig = orgSettings.visitor_field_config || {};
+      const showId = fieldConfig.id_number !== false;
+      const showPhone = fieldConfig.phone !== false;
+      const showOffice = fieldConfig.office !== false;
+      const showPurpose = fieldConfig.purpose !== false;
+
+      const headers = ['Name'];
+      if (showId) headers.push('ID');
+      if (showPhone) headers.push('Phone');
+      if (showOffice) headers.push('Office');
+      if (showPurpose) headers.push('Purpose');
+      headers.push('Arrived', 'Left');
+
+      const rows = visitorsCache.map(v => {
+        const cells = [v.name ?? '—'];
+        if (showId) cells.push(v.visitor_id ?? '—');
+        if (showPhone) cells.push(v.phone ?? '—');
+        if (showOffice) cells.push(v.office ?? '—');
+        if (showPurpose) cells.push(v.purpose ?? '—');
+        cells.push(v.time ? new Date(v.time).toLocaleTimeString() : '—');
+        cells.push(v.time_out ? new Date(v.time_out).toLocaleTimeString() : 'Still in');
+        return cells;
+      });
+
+      const printWindow = window.open('', '_blank');
+      printWindow.document.write(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <title>Visitor Log - ${dateStr}</title>
+          <style>
+            body { font-family: Arial, sans-serif; padding: 24px; color: #111; }
+            h1 { font-size: 18px; margin-bottom: 16px; }
+            table { width: 100%; border-collapse: collapse; font-size: 13px; }
+            th { background: #166534; color: #fff; text-align: left; padding: 8px 10px; }
+            td { padding: 7px 10px; border-bottom: 1px solid #ddd; }
+            tr:nth-child(even) { background: #f7f7f7; }
+          </style>
+        </head>
+        <body>
+          <h1>${orgName} — Visitor Log — ${dateStr}</h1>
+          <table>
+            <thead><tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr></thead>
+            <tbody>${rows.map(r => `<tr>${r.map(c => `<td>${c}</td>`).join('')}</tr>`).join('')}</tbody>
+          </table>
+        </body>
+        </html>
+      `);
+      printWindow.document.close();
+      printWindow.onload = () => printWindow.print();
     }
 
     async function handleVisitorCheckout(id) {
