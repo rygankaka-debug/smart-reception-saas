@@ -233,6 +233,7 @@
         orgSettings = data || {};
         if (!Array.isArray(orgSettings.extra_visitor_fields)) orgSettings.extra_visitor_fields = [];
         if (!orgSettings.visitor_field_config || typeof orgSettings.visitor_field_config !== 'object') orgSettings.visitor_field_config = {};
+        if (!Array.isArray(orgSettings.shifts)) orgSettings.shifts = [];
         applyBranding();
       } catch (err) {
         console.error("Critical loading configuration error:", err.message);
@@ -240,6 +241,7 @@
         orgSettings = orgSettings && typeof orgSettings === 'object' ? orgSettings : {};
         if (!Array.isArray(orgSettings.extra_visitor_fields)) orgSettings.extra_visitor_fields = [];
         if (!orgSettings.visitor_field_config || typeof orgSettings.visitor_field_config !== 'object') orgSettings.visitor_field_config = {};
+        if (!Array.isArray(orgSettings.shifts)) orgSettings.shifts = [];
         applyBranding();
       }
     }
@@ -586,6 +588,7 @@
     }
 
     function renderStaffTab(container) {
+      resetShiftSelection();
       const staffOptions = staffListCache.map(s => `<option value="${s.staff_id}" data-name="${s.name}">${s.name} (${s.staff_id})</option>`).join('');
 
       container.innerHTML = `
@@ -596,6 +599,20 @@
               <option value="">Select Staff...</option>
               ${staffOptions}
             </select>
+
+            ${(orgSettings.shifts && orgSettings.shifts.length > 0) ? `
+              <div id="shift-toggle-wrap" class="space-y-2">
+                <label class="text-xs text-muted">Select your shift:</label>
+                <div class="grid grid-cols-${orgSettings.shifts.length} gap-2">
+                  ${orgSettings.shifts.map((s, i) => `
+                    <button type="button" onclick="selectShift('${s.name}', '${s.start}')" id="shift-btn-${i}" class="shift-toggle-btn py-2.5 px-2 surface-alt text-main text-xs font-semibold rounded-xl border border-main transition">
+                      ${s.name}<br><span class="text-[10px] text-muted">${s.start}–${s.end}</span>
+                    </button>
+                  `).join('')}
+                </div>
+                <p id="shift-selected-status" class="text-xs text-muted text-center">No shift selected yet</p>
+              </div>
+            ` : ''}
 
             <div class="space-y-2">
               <video id="camera-preview" class="hidden w-full max-h-64 object-cover rounded-xl border border-main bg-slate-900"></video>
@@ -694,6 +711,28 @@
 
     // ===================== CAMERA CAPTURE =====================
     let cameraStream = null;
+    let selectedShiftName = null;
+    let selectedShiftStart = null;
+
+    function selectShift(name, start) {
+      selectedShiftName = name;
+      selectedShiftStart = start;
+      document.querySelectorAll('.shift-toggle-btn').forEach(btn => {
+        btn.className = "shift-toggle-btn py-2.5 px-2 surface-alt text-main text-xs font-semibold rounded-xl border border-main transition";
+      });
+      const idx = (orgSettings.shifts || []).findIndex(s => s.name === name);
+      if (idx >= 0) {
+        const btn = document.getElementById(`shift-btn-${idx}`);
+        if (btn) btn.className = "shift-toggle-btn py-2.5 px-2 brand-bg text-white text-xs font-semibold rounded-xl border border-main transition";
+      }
+      const status = document.getElementById('shift-selected-status');
+      if (status) { status.textContent = `${name} selected (${start})`; status.className = 'text-xs text-emerald-400 font-semibold text-center'; }
+    }
+
+    function resetShiftSelection() {
+      selectedShiftName = null;
+      selectedShiftStart = null;
+    }
     let capturedPhotoDataUrl = null; // holds the public Storage URL once uploaded
 
     async function startCamera() {
@@ -754,6 +793,9 @@
       const staffId = select.value;
       const staffName = select.selectedOptions[0]?.dataset.name;
       if (!staffId) { errorEl.textContent = 'Select a staff member first.'; errorEl.classList.remove('hidden'); return; }
+      if (orgSettings.shifts && orgSettings.shifts.length > 0 && !selectedShiftName) {
+        errorEl.textContent = 'Select your shift first.'; errorEl.classList.remove('hidden'); return;
+      }
       if (!capturedPhotoDataUrl) { errorEl.textContent = 'A photo is required. Tap "Enable Camera" then "Capture Photo" before signing in.'; errorEl.classList.remove('hidden'); return; }
 
       const today = new Date().toISOString().slice(0, 10);
@@ -762,10 +804,11 @@
 
       const { error } = await sbClient.from('attendance').insert({
         organization_id: userOrgId, staff_id: staffId, name: staffName, time_in: new Date().toISOString(), date: today,
-        photo_in: capturedPhotoDataUrl
+        photo_in: capturedPhotoDataUrl, shift_name: selectedShiftName, shift_start: selectedShiftStart
       });
       if (error) { errorEl.textContent = 'Sign-in failed: ' + error.message; errorEl.classList.remove('hidden'); return; }
       resetCapturedPhoto();
+      resetShiftSelection();
       loadTodayAttendance();
     }
 
@@ -803,21 +846,23 @@
     }
 
     // Returns the formatted time_in plus a "Late" badge if it's after org_settings.late_after
-    function renderTimeInCell(timeInIso) {
+    function renderTimeInCell(timeInIso, shiftStartOverride, shiftLabel) {
       if (!timeInIso) return '—';
       const t = new Date(timeInIso);
       const label = t.toLocaleTimeString();
-      const lateAfter = orgSettings.late_after; // e.g. "08:05:00" or "08:05"
+      const lateAfter = shiftStartOverride || orgSettings.late_after; // shift-specific time takes priority over the org-wide rule
       if (!lateAfter) return label;
 
       const [lh, lm] = lateAfter.split(':').map(Number);
       const minutes = t.getHours() * 60 + t.getMinutes();
       const lateThreshold = lh * 60 + lm;
 
+      const shiftTag = shiftLabel ? `<span class="ml-1 text-[10px] px-1.5 py-0.5 rounded surface-alt text-muted">${shiftLabel}</span>` : '';
+
       if (minutes > lateThreshold) {
-        return `${label} <span class="ml-1 text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded bg-red-500/20 text-red-400">Late</span>`;
+        return `${label} <span class="ml-1 text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded bg-red-500/20 text-red-400">Late</span>${shiftTag}`;
       }
-      return label;
+      return `${label}${shiftTag}`;
     }
 
     async function loadTodayAttendance() {
@@ -838,7 +883,7 @@
             ${data.map(a => `
               <tr>
                 <td class="px-4 py-3 font-medium text-main">${a.name ?? '—'}</td>
-                <td class="px-4 py-3 whitespace-nowrap">${renderTimeInCell(a.time_in)}</td>
+                <td class="px-4 py-3 whitespace-nowrap">${renderTimeInCell(a.time_in, a.shift_start, a.shift_name)}</td>
                 <td class="px-4 py-3">${a.photo_in ? `<img src="${a.photo_in}" class="w-10 h-10 rounded-lg object-cover border border-main">` : '—'}</td>
                 <td class="px-4 py-3">${a.time_out ? new Date(a.time_out).toLocaleTimeString() : '<span class="text-emerald-600 font-semibold">Still in</span>'}</td>
                 <td class="px-4 py-3">${a.photo_out ? `<img src="${a.photo_out}" class="w-10 h-10 rounded-lg object-cover border border-main">` : '—'}</td>
@@ -1148,7 +1193,7 @@
       if (aErr) { aWrap.innerHTML = `<div class="p-6 text-center text-red-500 text-sm">${aErr.message}</div>`; }
       else if (!attendance || attendance.length === 0) { aWrap.innerHTML = `<div class="p-6 text-center text-muted text-sm">No staff attendance in this range.</div>`; }
       else {
-        aWrap.innerHTML = `<table class="w-full text-sm text-left"><thead class="surface-alt text-muted uppercase text-xs font-bold"><tr><th class="px-4 py-3">Name</th><th class="px-4 py-3">Date</th><th class="px-4 py-3">In</th><th class="px-4 py-3">Out</th></tr></thead><tbody class="divide-y divide-slate-100">${attendance.map(a => `<tr><td class="px-4 py-3">${a.name ?? '—'}</td><td class="px-4 py-3 text-xs text-muted">${a.date ?? '—'}</td><td class="px-4 py-3 whitespace-nowrap">${renderTimeInCell(a.time_in)}</td><td class="px-4 py-3">${a.time_out ? new Date(a.time_out).toLocaleTimeString() : '—'}</td></tr>`).join('')}</tbody></table>`;
+        aWrap.innerHTML = `<table class="w-full text-sm text-left"><thead class="surface-alt text-muted uppercase text-xs font-bold"><tr><th class="px-4 py-3">Name</th><th class="px-4 py-3">Date</th><th class="px-4 py-3">In</th><th class="px-4 py-3">Out</th></tr></thead><tbody class="divide-y divide-slate-100">${attendance.map(a => `<tr><td class="px-4 py-3">${a.name ?? '—'}</td><td class="px-4 py-3 text-xs text-muted">${a.date ?? '—'}</td><td class="px-4 py-3 whitespace-nowrap">${renderTimeInCell(a.time_in, a.shift_start, a.shift_name)}</td><td class="px-4 py-3">${a.time_out ? new Date(a.time_out).toLocaleTimeString() : '—'}</td></tr>`).join('')}</tbody></table>`;
       }
     }
 
@@ -1297,11 +1342,33 @@
             <div>
               <label class="text-xs text-muted">Sign-in is late after:</label>
               <input type="time" id="setting-late-after" value="${orgSettings.late_after || '08:05'}" class="field-input">
+              <p class="text-xs text-muted mt-1">Used only for staff who don't select a shift below.</p>
             </div>
             <div>
               <label class="text-xs text-muted">Earliest allowed sign-out:</label>
               <input type="time" id="setting-earliest-signout" value="${orgSettings.earliest_signout || '17:00'}" class="field-input">
             </div>
+          </div>
+
+          <div class="space-y-3">
+            <h4 class="text-base font-bold text-main">Shifts</h4>
+            <p class="text-xs text-muted">If your staff work different shift times, set them here. Leave a shift's times blank if you don't need it — staff will then use the single late-time rule above instead.</p>
+            ${['A', 'B', 'C'].map(letter => {
+              const shift = (orgSettings.shifts || []).find(s => s.name === `Shift ${letter}`) || {};
+              return `
+                <div class="grid grid-cols-3 gap-2 items-end">
+                  <div class="text-sm font-semibold text-main pb-2.5">Shift ${letter}</div>
+                  <div>
+                    <label class="text-xs text-muted">Start</label>
+                    <input type="time" id="shift-${letter}-start" value="${shift.start || ''}" class="field-input">
+                  </div>
+                  <div>
+                    <label class="text-xs text-muted">End</label>
+                    <input type="time" id="shift-${letter}-end" value="${shift.end || ''}" class="field-input">
+                  </div>
+                </div>
+              `;
+            }).join('')}
           </div>
 
           <button onclick="handleSaveSettings()" class="btn-primary">Save Branding & Rules</button>
@@ -1375,10 +1442,16 @@
         office: document.getElementById('field-toggle-office').checked
       };
 
+      const newShifts = ['A', 'B', 'C'].map(letter => {
+        const start = document.getElementById(`shift-${letter}-start`).value;
+        const end = document.getElementById(`shift-${letter}-end`).value;
+        return (start && end) ? { name: `Shift ${letter}`, start, end } : null;
+      }).filter(Boolean);
+
       const { error } = await sbClient.from('org_settings').update({
         org_name: newName, tagline: newTagline, primary_color: newColor, logo_url: newLogo,
         late_after: lateAfter, earliest_signout: earliestSignout,
-        visitor_field_config: newFieldConfig
+        visitor_field_config: newFieldConfig, shifts: newShifts
       }).eq('organization_id', userOrgId);
 
       if (error) { showToast('Save failed: ' + error.message, 'error'); return; }
