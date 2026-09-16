@@ -605,7 +605,7 @@
                 <label class="text-xs text-muted">Select your shift:</label>
                 <div class="grid grid-cols-${orgSettings.shifts.length} gap-2">
                   ${orgSettings.shifts.map((s, i) => `
-                    <button type="button" onclick="selectShift('${s.name}', '${s.start}')" id="shift-btn-${i}" class="shift-toggle-btn py-2.5 px-2 surface-alt text-main text-xs font-semibold rounded-xl border border-main transition">
+                    <button type="button" onclick="selectShift('${s.name}', '${s.start}', '${s.end}')" id="shift-btn-${i}" class="shift-toggle-btn py-2.5 px-2 surface-alt text-main text-xs font-semibold rounded-xl border border-main transition">
                       ${s.name}<br><span class="text-[10px] text-muted">${s.start}–${s.end}</span>
                     </button>
                   `).join('')}
@@ -713,10 +713,12 @@
     let cameraStream = null;
     let selectedShiftName = null;
     let selectedShiftStart = null;
+    let selectedShiftEnd = null;
 
-    function selectShift(name, start) {
+    function selectShift(name, start, end) {
       selectedShiftName = name;
       selectedShiftStart = start;
+      selectedShiftEnd = end;
       document.querySelectorAll('.shift-toggle-btn').forEach(btn => {
         btn.className = "shift-toggle-btn py-2.5 px-2 surface-alt text-main text-xs font-semibold rounded-xl border border-main transition";
       });
@@ -726,12 +728,13 @@
         if (btn) btn.className = "shift-toggle-btn py-2.5 px-2 brand-bg text-white text-xs font-semibold rounded-xl border border-main transition";
       }
       const status = document.getElementById('shift-selected-status');
-      if (status) { status.textContent = `${name} selected (${start})`; status.className = 'text-xs text-emerald-400 font-semibold text-center'; }
+      if (status) { status.textContent = `${name} selected (${start}–${end})`; status.className = 'text-xs text-emerald-400 font-semibold text-center'; }
     }
 
     function resetShiftSelection() {
       selectedShiftName = null;
       selectedShiftStart = null;
+      selectedShiftEnd = null;
     }
     let capturedPhotoDataUrl = null; // holds the public Storage URL once uploaded
 
@@ -804,7 +807,7 @@
 
       const { error } = await sbClient.from('attendance').insert({
         organization_id: userOrgId, staff_id: staffId, name: staffName, time_in: new Date().toISOString(), date: today,
-        photo_in: capturedPhotoDataUrl, shift_name: selectedShiftName, shift_start: selectedShiftStart
+        photo_in: capturedPhotoDataUrl, shift_name: selectedShiftName, shift_start: selectedShiftStart, shift_end: selectedShiftEnd
       });
       if (error) { errorEl.textContent = 'Sign-in failed: ' + error.message; errorEl.classList.remove('hidden'); return; }
       resetCapturedPhoto();
@@ -820,8 +823,12 @@
       if (!staffId) { errorEl.textContent = 'Select a staff member first.'; errorEl.classList.remove('hidden'); return; }
       if (!capturedPhotoDataUrl) { errorEl.textContent = 'A photo is required. Tap "Enable Camera" then "Capture Photo" before signing out.'; errorEl.classList.remove('hidden'); return; }
 
-      // Enforce earliest allowed sign-out time from org settings
-      const earliest = orgSettings.earliest_signout; // e.g. "17:00:00" or "17:00"
+      const today = new Date().toISOString().slice(0, 10);
+      const { data: existing } = await sbClient.from('attendance').select('id, shift_end').eq('organization_id', userOrgId).eq('staff_id', staffId).eq('date', today).maybeSingle();
+      if (!existing) { errorEl.textContent = 'No sign-in found for today.'; errorEl.classList.remove('hidden'); return; }
+
+      // Prefer this person's own shift end time; only fall back to the org-wide rule if they weren't signed in under a shift
+      const earliest = existing.shift_end || orgSettings.earliest_signout; // e.g. "17:00:00" or "17:00"
       if (earliest) {
         const [eh, em] = earliest.split(':').map(Number);
         const now = new Date();
@@ -834,10 +841,6 @@
           return;
         }
       }
-
-      const today = new Date().toISOString().slice(0, 10);
-      const { data: existing } = await sbClient.from('attendance').select('id').eq('organization_id', userOrgId).eq('staff_id', staffId).eq('date', today).maybeSingle();
-      if (!existing) { errorEl.textContent = 'No sign-in found for today.'; errorEl.classList.remove('hidden'); return; }
 
       const { error } = await sbClient.from('attendance').update({ time_out: new Date().toISOString(), photo_out: capturedPhotoDataUrl }).eq('id', existing.id);
       if (error) { errorEl.textContent = 'Sign-out failed: ' + error.message; errorEl.classList.remove('hidden'); return; }
